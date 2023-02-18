@@ -44,6 +44,52 @@ class Trajectory:
         for pt in self.points:
             yield pt
 
+    def copy(self):
+        new_traj = Trajectory(len(self.points))
+        new_traj.points = self.points.copy()
+        return new_traj
+
+    def inc(self, idx: int):
+        if idx + 1 == len(self.points):
+            return 0
+        else:
+            return idx + 1
+
+    def dec(self, idx: int):
+        if idx - 1 < 0:
+            return len(self.points) - 1
+        else:
+            return idx - 1
+
+    def fill_time(self):
+        # Check for zero speeds
+        for pt in self.points:
+            if pt[Trajectory.SPEED] == 0.0 and pt[Trajectory.LON_ACC == 0.0]:
+                raise Exception(
+                    "Zero speed and lon_acc encoutered. Cannot fill time.")
+
+        self.points[0, Trajectory.TIME] = 0.0
+        for i in range(len(self.points)):
+            this, next = i, i + 1
+            if next == len(self.points):
+                next = 0
+            # x = 1/2 * (v_0 + v) * t
+            x = self.distance(self.points[this], self.points[next])
+            self.points[next, Trajectory.TIME] = x / (
+                0.5
+                * (
+                    self.points[this, Trajectory.SPEED]
+                    + self.points[next, Trajectory.SPEED]
+                )
+            )
+            self.points[next, Trajectory.TIME] += self.points[this,
+                                                              Trajectory.TIME]
+
+    def distance(self, pt1, pt2):
+        return np.sqrt(
+            (pt1[Trajectory.X] - pt2[Trajectory.X]) ** 2
+            + (pt1[Trajectory.Y] - pt2[Trajectory.Y]) ** 2
+        )
 
 class BSplineTrajectory:
     def __init__(self, coordinates: np.ndarray, s: float, k: int):
@@ -67,6 +113,14 @@ class BSplineTrajectory:
     def __get_yaw(self, t):
         return np.arctan2(interpolate.splev(t, self._spl_y, der=1), interpolate.splev(t, self._spl_x, der=1))
 
+    def __get_turn_radius(self, t):
+        dx = interpolate.splev(t, self._spl_x, der=1)
+        dy = interpolate.splev(t, self._spl_y, der=1)
+        d2x = interpolate.splev(t, self._spl_x, der=2)
+        d2y = interpolate.splev(t, self._spl_y, der=2)
+        curvature = (dx * d2y - dy * d2x) / np.sqrt((dx ** 2 + dy ** 2) ** 3)
+        return 1.0 / np.abs(curvature) + 1e-4
+
     def get_length(self):
         return self._length
 
@@ -81,6 +135,7 @@ class BSplineTrajectory:
         traj[:, Trajectory.X] = interpolate.splev(ts, self._spl_x)
         traj[:, Trajectory.Y] = interpolate.splev(ts, self._spl_y)
         traj[:, Trajectory.YAW] = self.__get_yaw(ts)
+        traj[:, Trajectory.CURVATURE] = self.__get_turn_radius(ts)
 
         for i in range(len(traj)):
             if i == 0:

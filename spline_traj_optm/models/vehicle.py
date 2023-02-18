@@ -12,21 +12,22 @@ class VehicleParams:
     max_left_acc_mpss: float  # signed acceleration (positive)
     max_right_acc_mpss: float  # signed acceleration (negative)
     max_speed_mps: float
+    max_jerk: float
 
 
 class Vehicle:
     def __init__(self, param: VehicleParams):
         self.param = param
-        self.acc_intp = interpolate.splrep(
-            self.param.acc_speed_lookup[:, 0], self.param.acc_speed_lookup[:, 1], s=1.0, k=3)
-        self.dcc_intp = interpolate.splrep(
-            self.param.dcc_speed_lookup[:, 0], self.param.dcc_speed_lookup[:, 1], s=1.0, k=3)
+        self.acc_intp = interpolate.CubicSpline(
+            self.param.acc_speed_lookup[:, 0], self.param.acc_speed_lookup[:, 1])
+        self.dcc_intp = interpolate.CubicSpline(
+            self.param.dcc_speed_lookup[:, 0], self.param.dcc_speed_lookup[:, 1])
 
     def lookup_acc_from_speed(self, speed_mps: float) -> tuple:
-        return interpolate.splev(speed_mps, self.acc_intp)
+        return self.acc_intp(speed_mps)
 
     def lookup_dcc_from_speed(self, speed_mps: float):
-        return interpolate.splev(speed_mps, self.dcc_intp)
+        return self.dcc_intp(speed_mps)
 
     def lookup_acc_circle(self, lat=None, lon=None, model='ellipse'):
         assert (lat is not None) or (lon is not None)

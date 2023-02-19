@@ -145,10 +145,11 @@ class Simulator:
             )
             turn_pt[Trajectory.ITERATION_FLAG] = turn
         
-        def iterate():
+        def iterate(iteration_flags):
             itr = 0
             while True:
                 # For every turn, enter it as fast as possible
+                new_flags = []
                 for flags in iteration_flags:
                     stopped = flags[3] == 1
                     if stopped:
@@ -184,7 +185,7 @@ class Simulator:
                     )[0]
                     max_curve_speed = self.calc_v(
                         max_lat_acc, enter_pt[Trajectory.CURVATURE],
-                        turn_pt[Trajectory.BANK]
+                        enter_pt[Trajectory.BANK]
                     )
                     min_curve_speed = 0.0
                     # Get the max possible speed from vehicle constraint
@@ -223,7 +224,7 @@ class Simulator:
                                 - enter_pt[Trajectory.SPEED] ** 2
                             ) / (2 * dd)
                             enter_pt[Trajectory.LAT_ACC] = self.calc_lat_acc(
-                                enter_pt[Trajectory.SPEED], enter_pt[Trajectory.CURVATURE], turn_pt[Trajectory.BANK]
+                                enter_pt[Trajectory.SPEED], enter_pt[Trajectory.CURVATURE], enter_pt[Trajectory.BANK]
                             )
                             enter_pt[Trajectory.ITERATION_FLAG] = flags[1]
                     else:
@@ -233,6 +234,15 @@ class Simulator:
                         # If not valid (meaning the car will fly off), stop for another constraint to handle it
                         # Signal the stop flag
                         flags[3] = 1
+                        if max_greedy_speed > max_curve_speed or max_greedy_speed < min_state_speed:
+                            idx = enter_pt[Trajectory.IDX]
+                            new_flags.append(np.array([idx, idx, idx, 0, 0]))
+                            enter_pt[Trajectory.SPEED] = min(max_curve_speed, max_greedy_speed)
+                            enter_pt[Trajectory.LON_ACC] = last_enter_pt[Trajectory.LON_ACC]
+                            enter_pt[Trajectory.LAT_ACC] = self.calc_lat_acc(
+                                enter_pt[Trajectory.SPEED], enter_pt[Trajectory.CURVATURE], enter_pt[Trajectory.BANK]
+                            )
+                            enter_pt[Trajectory.ITERATION_FLAG] = idx
 
                 # For every turn, exit it as fast as possible
                 for flags in iteration_flags:
@@ -270,7 +280,7 @@ class Simulator:
                     )[0]
                     max_curve_speed = self.calc_v(
                         max_lat_acc, exit_pt[Trajectory.CURVATURE],
-                        turn_pt[Trajectory.BANK]
+                        exit_pt[Trajectory.BANK]
                     )
                     min_curve_speed = 0.0
                     # Get the max possible speed from vehicle constraint
@@ -309,22 +319,43 @@ class Simulator:
                                 - last_exit_pt[Trajectory.SPEED] ** 2
                             ) / (2 * dd)
                             exit_pt[Trajectory.LAT_ACC] = self.calc_lat_acc(
-                                exit_pt[Trajectory.SPEED], exit_pt[Trajectory.CURVATURE], turn_pt[Trajectory.BANK]
+                                exit_pt[Trajectory.SPEED], exit_pt[Trajectory.CURVATURE], exit_pt[Trajectory.BANK]
                             )
                             exit_pt[Trajectory.ITERATION_FLAG] = flags[1]
                     else:
                         # If not valid (meaning the car will fly off), stop for another constraint to handle it
                         # Signal the stop flag
                         flags[4] = 1
+                        # if constraint failed because the curvature is too high
+                        # make this point an additional turn
+                        if max_greedy_speed > max_curve_speed:
+                            idx = exit_pt[Trajectory.IDX]
+                            new_flags.append(np.array([idx, idx, idx, 0, 0]))
+                            exit_pt[Trajectory.SPEED] = max_curve_speed
+                            exit_pt[Trajectory.LON_ACC] = last_exit_pt[Trajectory.LON_ACC]
+                            exit_pt[Trajectory.LAT_ACC] = self.calc_lat_acc(
+                                exit_pt[Trajectory.SPEED], exit_pt[Trajectory.CURVATURE], exit_pt[Trajectory.BANK]
+                            )
+                            exit_pt[Trajectory.ITERATION_FLAG] = idx
 
-                if enable_vis and itr % 10 == 0:
+                # add new flags at end of iteration
+                if len(new_flags) > 0:
+                    iteration_flags = np.vstack([iteration_flags, np.array(new_flags, dtype=int)])
+
+                # remove done iterations
+                mask = (iteration_flags[:, 3] != 1) | (iteration_flags[:, 4] != 1)
+                iteration_flags = iteration_flags[mask, :]
+
+                if enable_vis and itr % 100 == 0:
                     vis.update_plot(0.001)
                 # Check if all iterations are stopped
-                if np.all(iteration_flags[:, 3:] == 1):
+                # if np.all(iteration_flags[:, 3:] == 1):
+                #     break
+                if len(iteration_flags) == 0:
                     break
                 itr += 1      
 
-        iterate()
+        iterate(iteration_flags)
 
         # Populate the time and distance fields
         trajectory_out.fill_time()

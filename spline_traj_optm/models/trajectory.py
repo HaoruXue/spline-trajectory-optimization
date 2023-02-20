@@ -1,6 +1,6 @@
 import numpy as np
+import copy
 from scipy import interpolate
-from matplotlib import pyplot as plt
 from scipy.interpolate import BSpline
 from scipy.integrate import quad
 
@@ -91,6 +91,9 @@ class Trajectory:
             + (pt1[Trajectory.Y] - pt2[Trajectory.Y]) ** 2
         )
 
+    def ts(self):
+        return np.linspace(0.0, 1.0, self.__len__(), endpoint=False)
+
 class BSplineTrajectory:
     def __init__(self, coordinates: np.ndarray, s: float, k: int):
         assert coordinates.shape[0] >= 3 and coordinates.shape[1] == 2 and len(
@@ -110,6 +113,9 @@ class BSplineTrajectory:
         length, err = quad(self.__integrate, t_min, t_max, limit=200)
         return length
 
+    def eval_sectional_length(self, ts):
+        return self.__get_section_length(ts[0], ts[1])
+
     def __get_yaw(self, t):
         return np.arctan2(interpolate.splev(t, self._spl_y, der=1), interpolate.splev(t, self._spl_x, der=1))
 
@@ -123,6 +129,9 @@ class BSplineTrajectory:
 
     def get_length(self):
         return self._length
+
+    def eval_yaw(self, t):
+        return self.__get_yaw(t)
 
     def sample_along(self, interval: float) -> Trajectory:
         total_length = self.get_length()
@@ -144,3 +153,13 @@ class BSplineTrajectory:
         traj[:, Trajectory.DIST_TO_SF_FWD] = self._length - traj[:, Trajectory.DIST_TO_SF_BWD]
    
         return traj
+
+    def copy(self):
+        return copy.deepcopy(self)
+
+    def set_control_point(self, idx, coord):
+        self._spl_x.c[idx] = coord[0]
+        self._spl_y.c[idx] = coord[1]
+
+    def get_control_point(self, idx):
+        return self._spl_x.c[idx], self._spl_y.c[idx]

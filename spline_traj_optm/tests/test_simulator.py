@@ -22,6 +22,7 @@ def test_simulator():
     sim = Simulator(v)
     result = sim.run_simulation(traj_discrete, True)
     print(result)
+    return result
 
 
 test_simulator()

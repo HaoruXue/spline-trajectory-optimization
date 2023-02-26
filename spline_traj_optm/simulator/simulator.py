@@ -174,10 +174,10 @@ class Simulator:
                     min_acc = np.clip(min_acc, vehicle_max_dcc, vehicle_max_acc)
                     # v_0^2 = 2ax - v^2
                     min_state_speed = sqrt(
-                        last_enter_pt[Trajectory.SPEED] ** 2 - 2 * max_acc * dd
+                        max(last_enter_pt[Trajectory.SPEED] ** 2 - 2 * max_acc * dd, 0.0)
                     )
                     max_state_speed = sqrt(
-                        last_enter_pt[Trajectory.SPEED] ** 2 - 2 * min_acc * dd
+                        max(last_enter_pt[Trajectory.SPEED] ** 2 - 2 * min_acc * dd, 0.0)
                     )
                     # Get the max possible speed from the curvature
                     max_lat_acc = self.vehicle.lookup_acc_circle(
@@ -269,10 +269,10 @@ class Simulator:
                     min_acc = np.clip(min_acc, vehicle_max_dcc, vehicle_max_acc)
                     # v^2 = 2ax + v_0^2
                     max_state_speed = sqrt(
-                        2 * max_acc * dd + last_exit_pt[Trajectory.SPEED] ** 2
+                        max(2 * max_acc * dd + last_exit_pt[Trajectory.SPEED] ** 2, 0.0)
                     )
                     min_state_speed = sqrt(
-                        2 * min_acc * dd + last_exit_pt[Trajectory.SPEED] ** 2
+                        max(2 * min_acc * dd + last_exit_pt[Trajectory.SPEED] ** 2, 0.0)
                     )
                     # Get the max possible speed from the curvature
                     max_lat_acc = self.vehicle.lookup_acc_circle(

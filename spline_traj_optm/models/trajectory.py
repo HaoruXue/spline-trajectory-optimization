@@ -116,6 +116,21 @@ class BSplineTrajectory:
     def eval_sectional_length(self, ts):
         return self.__get_section_length(ts[0], ts[1])
 
+    def eval_dx_sectional_length(self, ts):
+        def to_integrate(t):
+            return interpolate.splev(t, self._spl_x, der=2) / np.sqrt(interpolate.splev(t, self._spl_x, der=1) ** 2 + interpolate.splev(t, self._spl_y, der=1) ** 2)
+        length, err = quad(to_integrate, ts[0], ts[1], limit=200)
+        return length
+
+    def eval_dy_sectional_length(self, ts):
+        def to_integrate(t):
+            return interpolate.splev(t, self._spl_y, der=2) / np.sqrt(interpolate.splev(t, self._spl_x, der=1) ** 2 + interpolate.splev(t, self._spl_y, der=1) ** 2)
+        length, err = quad(to_integrate, ts[0], ts[1], limit=200)
+        return length
+
+    def eval(self, t, der=0):
+        return interpolate.splev(t, self._spl_x, der=der), interpolate.splev(t, self._spl_y, der=der)
+
     def __get_yaw(self, t):
         return np.arctan2(interpolate.splev(t, self._spl_y, der=1), interpolate.splev(t, self._spl_x, der=1))
 
@@ -125,7 +140,7 @@ class BSplineTrajectory:
         d2x = interpolate.splev(t, self._spl_x, der=2)
         d2y = interpolate.splev(t, self._spl_y, der=2)
         curvature = (dx * d2y - dy * d2x) / np.sqrt((dx ** 2 + dy ** 2) ** 3)
-        return 1.0 / np.abs(curvature) + 1e-4
+        return 1.0 / (np.abs(curvature))
 
     def get_length(self):
         return self._length
@@ -133,13 +148,15 @@ class BSplineTrajectory:
     def eval_yaw(self, t):
         return self.__get_yaw(t)
 
-    def sample_along(self, interval: float) -> Trajectory:
-        total_length = self.get_length()
-        num_sample = int(total_length // interval)
-        interval = total_length / num_sample
-        traj = Trajectory(num_sample)
-
-        ts = np.linspace(0.0, 1.0, num_sample, endpoint=False)
+    def sample_along(self, interval: float=None, ts=None) -> Trajectory:
+        if interval is not None:
+            total_length = self.get_length()
+            num_sample = int(total_length // interval)
+            interval = total_length / num_sample
+            traj = Trajectory(num_sample)
+            ts = np.linspace(0.0, 1.0, num_sample, endpoint=False)
+        else:
+            traj = Trajectory(len(ts))
 
         traj[:, Trajectory.X] = interpolate.splev(ts, self._spl_x)
         traj[:, Trajectory.Y] = interpolate.splev(ts, self._spl_y)

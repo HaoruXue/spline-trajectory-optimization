@@ -132,9 +132,11 @@ setup(
         "shapely",
         "pyyaml",
         "tk",
-        "bezier",
         "importlib_resources",
         "pytest",
+        "shapely",
+        "scipy",
+        "casadi",
     ],  # Optional
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"

@@ -28,7 +28,7 @@ def test_vehicle():
 
     x = np.linspace(0.0, 25.0, 1001)
     y = np.sqrt((1 - x**2 / 20.0**2) * 15.0**2)
-    plt.plot(x, y, '-r', label='tyre constraint (actual)')
+    plt.plot(x, y, '-r', label='tire constraint (actual)')
 
     y = -np.sqrt((1 - x**2 / 20.0**2) * 25.0**2)
     plt.plot(x, y, '-r')

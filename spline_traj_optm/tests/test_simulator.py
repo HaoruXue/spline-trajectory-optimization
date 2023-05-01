@@ -5,11 +5,11 @@ from spline_traj_optm.tests.test_trajectory import get_bspline
 from spline_traj_optm.models.trajectory import Trajectory, BSplineTrajectory
 from spline_traj_optm.models.vehicle import VehicleParams, Vehicle
 from spline_traj_optm.simulator.simulator import Simulator
-import spline_traj_optm.samples.race_track.monza
+import spline_traj_optm.examples.race_track.monza
 
 
 def test_simulator():
-    traj_spline = get_bspline(files(spline_traj_optm.samples.race_track.monza).joinpath(
+    traj_spline = get_bspline(files(spline_traj_optm.examples.race_track.monza).joinpath(
         "MONZA_UNOPTIMIZED_LINE_enu.csv"), s=30.0)
     traj_discrete = traj_spline.sample_along(1.0)
 

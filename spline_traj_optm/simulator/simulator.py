@@ -1,7 +1,7 @@
 from math import sqrt
 from spline_traj_optm.models.trajectory import Trajectory
 from spline_traj_optm.models.vehicle import Vehicle, VehicleParams
-from spline_traj_optm.simulator.visualization import SimulatorVisualization
+from spline_traj_optm.simulator.visualization import SimulatorVisualization, SimulatorVelocityVisualization
 from dataclasses import dataclass
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
@@ -77,7 +77,7 @@ class Simulator:
         # trajectory_out[:, Trajectory.CURVATURE] = gaussian_filter1d(trajectory_out[:, Trajectory.CURVATURE], 1.0, mode='wrap')
 
         if enable_vis:
-            vis = SimulatorVisualization(trajectory_out)
+            vis = SimulatorVelocityVisualization(trajectory_out)
 
         # Find points on track with max curvatures
         def find_turns() -> np.ndarray:

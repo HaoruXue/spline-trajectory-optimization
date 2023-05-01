@@ -3,7 +3,8 @@ import copy
 from scipy import interpolate
 from scipy.interpolate import BSpline
 from scipy.integrate import quad
-
+from shapely.geometry import Point, LinearRing, GeometryCollection, LineString, MultiPoint
+import pickle
 
 class Trajectory:
     X = 0
@@ -61,6 +62,62 @@ class Trajectory:
         else:
             return idx - 1
 
+    def fill_bounds(self, left_poly, right_poly, max_dist=100.0):
+        def find_intersect(wp:np.ndarray, poly: LinearRing, norm, max_dist):
+            yaw_tan, x, y = wp[Trajectory.YAW], wp[Trajectory.X], wp[Trajectory.Y]
+            traj_pt = Point(x, y)
+            yaw_norm = yaw_tan + norm
+            max_norm = (x + max_dist * np.cos(yaw_norm), y + max_dist * np.sin(yaw_norm))
+            min_norm = (x + max_dist * np.cos(yaw_norm + np.pi), y + max_dist * np.sin(yaw_norm + np.pi))
+            line_norm = LineString((min_norm, max_norm))
+            some_intersects = line_norm.intersection(poly)
+            this_some_distance = max_dist
+            this_some_intersection = None
+            if type(some_intersects) in (GeometryCollection, MultiPoint):
+                distances = []
+                intersections = []
+                for intersection in list(some_intersects.geoms):
+                    if type(intersection) is Point:
+                        distances.append(
+                            traj_pt.distance(intersection))
+                        intersections.append(intersection)
+                    else:
+                        print(
+                            f"Issue with boundary at index {wp[Trajectory.IDX]}: intersection with {poly.name} is not a Point but {type(intersection)}.")
+                if len(distances) == 0:
+                    print(
+                        f"Issue with boundary at index {wp[Trajectory.IDX]}: no Point intersection found with Geometry of name {poly.name}.")
+                else:
+                    min_dist_idx = np.argmin(np.array(distances))
+                    this_some_distance = distances[min_dist_idx]
+                    this_some_intersection = intersections[min_dist_idx]
+            elif type(some_intersects) is Point:
+                this_some_distance = traj_pt.distance(
+                    some_intersects)
+                this_some_intersection = some_intersects
+            else:
+                # line_vis = np.array(line_norm.coords)
+                # poly_vis = np.array(poly.coords)
+                # fig, ax = plt.subplots()
+                # ax.set_aspect('equal')
+                # ax.plot(line_vis[:, 0], line_vis[:, 1])
+                # ax.plot(poly_vis[:, 0], poly_vis[:, 1])
+                # fig.show()
+                # raise Exception("No intersection with boundary found.")
+                return 0.0, traj_pt
+
+            return this_some_distance, this_some_intersection
+
+        def calc_left_right_bounds(wp):
+            _, left_bound = find_intersect(wp, left_poly, np.pi / 2.0, max_dist)
+            _, right_bound = find_intersect(wp, right_poly, -np.pi / 2.0, max_dist)
+            wp[Trajectory.LEFT_BOUND_X] = left_bound.x
+            wp[Trajectory.LEFT_BOUND_Y] = left_bound.y
+            wp[Trajectory.RIGHT_BOUND_X] = right_bound.x
+            wp[Trajectory.RIGHT_BOUND_Y] = right_bound.y
+
+        np.apply_along_axis(calc_left_right_bounds, 1, self.points)
+
     def fill_time(self):
         # Check for zero speeds
         for pt in self.points:
@@ -94,6 +151,15 @@ class Trajectory:
     def ts(self):
         return np.linspace(0.0, 1.0, self.__len__(), endpoint=False)
 
+    def save(f, traj):
+        np.savetxt(f, traj.points, delimiter=',')
+
+    def load(f):
+        arr = np.loadtxt(f, np.float64, delimiter=',')
+        traj = Trajectory(len(arr))
+        traj.points = arr
+        return traj
+
 class BSplineTrajectory:
     def __init__(self, coordinates: np.ndarray, s: float, k: int):
         assert coordinates.shape[0] >= 3 and coordinates.shape[1] == 2 and len(
@@ -106,11 +172,11 @@ class BSplineTrajectory:
         self._spl_y = BSpline(tck[0], tck[1][1], tck[2])
         self._length = self.__get_section_length(0.0, 1.0)
 
-    def __integrate(self, t: float):
+    def __integrate_length(self, t: float):
         return np.sqrt(interpolate.splev(t, self._spl_x, der=1) ** 2 + interpolate.splev(t, self._spl_y, der=1) ** 2)
 
     def __get_section_length(self, t_min: float, t_max: float):
-        length, err = quad(self.__integrate, t_min, t_max, limit=200)
+        length, err = quad(self.__integrate_length, t_min, t_max, limit=200)
         return length
 
     def eval_sectional_length(self, ts):
@@ -166,7 +232,7 @@ class BSplineTrajectory:
         for i in range(len(traj)):
             if i == 0:
                 continue
-            traj[i, Trajectory.DIST_TO_SF_BWD] = traj[i-1, Trajectory.DIST_TO_SF_BWD] + self.__get_section_length(ts[i], ts[i-1])
+            traj[i, Trajectory.DIST_TO_SF_BWD] = traj[i-1, Trajectory.DIST_TO_SF_BWD] + self.__get_section_length(ts[i-1], ts[i])
         traj[:, Trajectory.DIST_TO_SF_FWD] = self._length - traj[:, Trajectory.DIST_TO_SF_BWD]
    
         return traj
@@ -180,3 +246,11 @@ class BSplineTrajectory:
 
     def get_control_point(self, idx):
         return self._spl_x.c[idx], self._spl_y.c[idx]
+
+    def save(f, traj):
+        with open(f, "wb") as output_file:
+            pickle.dump(traj, output_file)
+
+    def load(f):
+        with open(f, "rb") as input_file:
+            return pickle.load(input_file)

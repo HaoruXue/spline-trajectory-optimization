@@ -18,7 +18,7 @@ struct SplineTrajectory
         X_closed = [X; X[1]]
         Y_closed = [Y; Y[1]]
         intp = pyimport("scipy.interpolate")
-        tck, u = intp.splprep((X_closed, Y_closed), s=10, per=true, k=k)
+        tck, u = intp.splprep((X_closed, Y_closed), s=5, per=true, k=k)
         coeff_before = k ÷ 2
         coeff_after = k - coeff_before
         B = BK.PeriodicBSplineBasis(BK.BSplineOrder(k), tck[1][k+1:end-k])

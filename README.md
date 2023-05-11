@@ -6,6 +6,7 @@ Spline-based Trajectory Optimization tool for Autonomous Racing (Indy Autonomous
 
 1. Install `SciPy`, `matplotlib`, `shapely`.
 2. Install Julia 1.8.5+.
+3. Clone this repository and install with `pip install -e .`.
 
 ## Run
 

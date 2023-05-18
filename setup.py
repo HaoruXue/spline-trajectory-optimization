@@ -168,13 +168,11 @@ setup(
     #
     # For example, the following would provide a command called `sample` which
     # executes the function `main` from this package when invoked:
-    # entry_points={  # Optional
-    #     "console_scripts": [
-    #         "trajectory_init=trajectory_tools.entrypoints.create_run:main",
-    #         "trajectory_edit=trajectory_tools.entrypoints.edit_trajectory:main",
-    #         "trajectory_sim=trajectory_tools.entrypoints.simulate:main",
-    #     ],
-    # },
+    entry_points={  # Optional
+        "console_scripts": [
+            "traj_opt_double_track=spline_traj_optm.entrypoints.traj_opt_double_track:main",
+        ],
+    },
     # List additional URLs that are relevant to your project as a dict.
     #
     # This field corresponds to the "Project-URL" metadata fields:

@@ -2,37 +2,17 @@ import casadi as ca
 
 from spline_traj_optm.models.trajectory import Trajectory
 import spline_traj_optm.models.dynamic_bicycle as dyn
+import spline_traj_optm.models.double_track as dt_dyn
+import spline_traj_optm.utils.utils as utils
+import spline_traj_optm.utils.integrator as integrator
 
-
-def global_to_frenet(p, p0, yaw):
-    cos_theta = ca.cos(-yaw)
-    sin_theta = ca.sin(-yaw)
-    R = ca.DM(ca.vertcat(ca.horzcat(cos_theta, -sin_theta),
-                         ca.horzcat(sin_theta, cos_theta)))
-    return R @ (p - p0)
-
+GRAVITY = 9.8
 
 def min_time_cost(T):
     return ca.sum1(T)
 
 
-def align_yaw(yaw1, yaw2):
-    k = ca.fabs(yaw2-yaw1)+ca.pi
-    l = k - ca.fmod(ca.fabs(yaw2-yaw1)+ca.pi, 2 * ca.pi)
-    return yaw1 + l * ca.sign(yaw2 - yaw1)
-
-
-def hermite_simpson(model, dynamics, x1, x2, u, dt):
-    temp = ca.MX(x2)
-    temp[0, 2] = align_yaw(temp[0, 2], x1[0, 2])
-    f1 = dynamics(model, x1, u).T
-    f2 = dynamics(model, temp, u).T
-    xm = 0.5 * (x1 + temp) + (dt / 8.0) * (f1 - f2)
-    fm = dynamics(model, xm, u).T
-    return x1 + (dt / 6.0) * (f1 + 4 * fm + f2) - temp
-
-
-def set_up_problem(params):
+def set_up_bicycle_problem(params):
     N = params["N"]
     traj_d = params["traj_d"]
     nu = params["nu"]
@@ -46,11 +26,15 @@ def set_up_problem(params):
     T = opti.variable(N)
 
     P0 = ca.DM(traj_d[:, Trajectory.X:Trajectory.Y+1])
+    X_OFFSET = ca.horzcat(P0, ca.DM.zeros(N, nx-2))
     Yaws = ca.DM(traj_d[:, Trajectory.YAW])
     BoundL = ca.DM(
         traj_d[:, Trajectory.LEFT_BOUND_X:Trajectory.LEFT_BOUND_Y+1])
     BoundR = ca.DM(
         traj_d[:, Trajectory.RIGHT_BOUND_X:Trajectory.RIGHT_BOUND_Y+1])
+    scale_x = ca.DM([10.0, 10.0, 3.14, 0.1, 80.0]).T
+    scale_u = ca.DM([20.0, 1.0]).T
+    scale_t = 1.0
 
     # cost
     cost_function = min_time_cost(T)
@@ -64,36 +48,39 @@ def set_up_problem(params):
 
     for i in range(N):
         # dynamics constraint
-        opti.subject_to(hermite_simpson(model, dynamics,
-                        X[i-1, :], X[i, :], U[i-1, :], T[i]) == 0)
+        xi = X[i-1, :] * scale_x + X_OFFSET[i-1, :]
+        xip1 = X[i, :] * scale_x + X_OFFSET[i, :]
+        ui = U[i-1, :] * scale_u
+        ti = T[i-1]
+
+        opti.subject_to(integrator.hermite_simpson(model, dynamics,
+                        xi, xip1, ui, ti) == 0)
 
         # boundary constraint in frenet frame
-        p = X[i, 0:2]
-        p0 = P0[i, :]
-        pf = global_to_frenet(p.T, p0.T, Yaws[i])
-        dl = ca.norm_2(BoundL[i, :] - p0)
-        dr = ca.norm_2(BoundR[i, :] - p0) * -1.0
+        p = X[i-1, 0:2] * scale_x[0:2]
+        p0 = P0[i-1, :]
+        pf = utils.global_to_frenet(p.T, ca.DM.zeros(2, 1), Yaws[i-1])
+        dl = ca.norm_2(BoundL[i-1, :] - p0)
+        dr = ca.norm_2(BoundR[i-1, :] - p0) * -1.0
         # opti.subject_to(opti.bounded(-5e-2, pf[0], 5e-2))
         opti.subject_to(pf[0] == 0)
         opti.subject_to(opti.bounded(dr, pf[1], dl))
 
         # traction constraint
-        lat_acc = dyn.lat_acc(model, X[i, :], U[i, :])
-        lon_acc = dyn.lon_acc(model, X[i, :], U[i, :])
+        lat_acc = dyn.lat_acc(model, xi, ui)
+        lon_acc = dyn.lon_acc(model, xi, ui)
         acc = ca.power(lat_acc, 2) + ca.power(lon_acc, 2)
         opti.subject_to(acc <= model["acc_max"] ** 2)
 
         # initial condition
-        opti.set_initial(X[i, :], ca.DM([p0[0], p0[1], Yaws[i], 0.0, 1.0]))
-        opti.set_initial(U[i, :], 0.0)
-        opti.set_initial(T[i], 1.0)
+        opti.set_initial(xi, ca.DM([0.0, 0.0, Yaws[i-1], 0.0, 1.0]))
+        opti.set_initial(ui, 0.0)
+        opti.set_initial(ti, 1.0)
 
         # primal bounds
-        opti.subject_to(x_l <= X[i, :])
-        opti.subject_to(X[i, :] <= x_u)
-        opti.subject_to(u_l <= U[i, :])
-        opti.subject_to(U[i, :] <= u_u)
-        opti.subject_to(0.0 <= T[i])
+        opti.subject_to(opti.bounded(x_l, X[i-1, :] * scale_x, x_u))
+        opti.subject_to(opti.bounded(u_l, U[i-1, :] * scale_u, u_u))
+        opti.subject_to(0.0 <= ti)
 
     print_lvl = 5 if params["verbose"] else 0
     p_opts = {"expand": True}
@@ -102,3 +89,74 @@ def set_up_problem(params):
     opti.solver('ipopt', p_opts, s_opts)
 
     return X, U, T, opti
+
+
+def set_up_double_track_problem(params):
+    N = params["N"]
+    traj_d = params["traj_d"]
+    nu = dt_dyn.nu()
+    nx = dt_dyn.nx()
+    model = params["model"]
+
+    opti = ca.Opti("nlp")
+    X = opti.variable(N, nx)
+    U = opti.variable(N, nu)
+    T = opti.variable(N)
+
+    P0 = ca.DM(traj_d[:, Trajectory.X:Trajectory.Y+1])
+    X_OFFSET = ca.horzcat(P0, ca.DM.zeros(N, nx-2))
+    Yaws = ca.DM(traj_d[:, Trajectory.YAW])
+    Velocities = ca.DM(traj_d[:, Trajectory.SPEED])
+    Times = ca.DM(traj_d[:, Trajectory.TIME])
+    # Forces = ca.DM(traj_d[:, Trajectory.LON_ACC]) * model["mass"]
+    BoundL = ca.DM(
+        traj_d[:, Trajectory.LEFT_BOUND_X:Trajectory.LEFT_BOUND_Y+1])
+    BoundR = ca.DM(
+        traj_d[:, Trajectory.RIGHT_BOUND_X:Trajectory.RIGHT_BOUND_Y+1])
+    ave_track_width = params["average_track_width"]
+    speed_cap = params["speed_cap"]
+    scale_x = ca.DM([ave_track_width / 2, ave_track_width / 2, 3.14, 1.0, 0.5, speed_cap]).T
+    scale_u = ca.DM([abs(model["Fd_max"]), abs(model["Fb_max"]), 0.4, 0.5 * model["mass"] * GRAVITY]).T
+    scale_t = 1.0
+
+    # cost
+    cost_function = min_time_cost(T)
+    opti.minimize(cost_function)
+
+    for i in range(N):
+        xi = X[i-1, :] * scale_x + X_OFFSET[i-1, :]
+        xip1 = X[i, :] * scale_x + X_OFFSET[i, :]
+        ui = U[i-1, :] * scale_u
+        uip1 = U[i, :] * scale_u
+        ti = T[i-1] * scale_t
+
+        # boundary constraint in frenet frame
+        p = X[i-1, 0:2] * scale_x[0:2]
+        p0 = P0[i-1, :]
+        pf = utils.global_to_frenet(p.T, ca.DM.zeros(2, 1), Yaws[i-1])
+        dl = ca.norm_2(BoundL[i-1, :] - p0)
+        dr = ca.norm_2(BoundR[i-1, :] - p0) * -1.0
+        # opti.subject_to(opti.bounded(-1e-1, pf[0], 1e-1))
+        opti.subject_to(pf[0] == 0)
+        opti.subject_to(opti.bounded(dr, pf[1], dl))
+
+        # model constraints
+        dt_dyn.add_constraints(model, opti, xi, ui, ti, xip1, uip1)
+
+        # time constraint
+        opti.subject_to(0.0 <= ti)
+
+        # initial condition
+        opti.set_initial(
+            X[i-1, :] * scale_x, ca.DM([0.0, 0.0, Yaws[i-1], 0.0, 0.0, Velocities[i-1]]))
+        u0 = ca.DM([1.0, -1.0, 0.001, 0.0])
+        opti.set_initial(ui, u0)
+        opti.set_initial(ti, Times[i-1])
+
+    print_lvl = 5 if params["verbose"] else 0
+    p_opts = {"expand": True}
+    s_opts = {"max_iter": params["max_iter"], "tol": params["tol"],
+              "constr_viol_tol": params["constr_viol_tol"], "print_level": print_lvl}
+    opti.solver('ipopt', p_opts, s_opts)
+
+    return (X, U, T), (scale_x, scale_u, scale_t), opti

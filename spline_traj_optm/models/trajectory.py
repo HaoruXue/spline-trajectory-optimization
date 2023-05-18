@@ -139,8 +139,8 @@ class Trajectory:
                     + self.points[next, Trajectory.SPEED]
                 )
             )
-            self.points[next, Trajectory.TIME] += self.points[this,
-                                                              Trajectory.TIME]
+            # self.points[next, Trajectory.TIME] += self.points[this,
+            #                                                   Trajectory.TIME]
 
     def distance(self, pt1, pt2):
         return np.sqrt(

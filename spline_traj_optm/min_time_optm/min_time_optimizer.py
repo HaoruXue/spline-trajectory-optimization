@@ -6,7 +6,6 @@ import spline_traj_optm.models.double_track as dt_dyn
 import spline_traj_optm.utils.utils as utils
 import spline_traj_optm.utils.integrator as integrator
 
-GRAVITY = 9.8
 
 def min_time_cost(T):
     return ca.sum1(T)
@@ -108,15 +107,14 @@ def set_up_double_track_problem(params):
     Yaws = ca.DM(traj_d[:, Trajectory.YAW])
     Velocities = ca.DM(traj_d[:, Trajectory.SPEED])
     Times = ca.DM(traj_d[:, Trajectory.TIME])
-    # Forces = ca.DM(traj_d[:, Trajectory.LON_ACC]) * model["mass"]
     BoundL = ca.DM(
         traj_d[:, Trajectory.LEFT_BOUND_X:Trajectory.LEFT_BOUND_Y+1])
     BoundR = ca.DM(
         traj_d[:, Trajectory.RIGHT_BOUND_X:Trajectory.RIGHT_BOUND_Y+1])
-    ave_track_width = params["average_track_width"]
-    speed_cap = params["speed_cap"]
-    scale_x = ca.DM([ave_track_width / 2, ave_track_width / 2, 3.14, 1.0, 0.5, speed_cap]).T
-    scale_u = ca.DM([abs(model["Fd_max"]), abs(model["Fb_max"]), 0.4, 0.5 * model["mass"] * GRAVITY]).T
+    scale_x = ca.DM([params["average_track_width"],
+                    params["average_track_width"], 3.14, 1.0, 0.5, params["speed_cap"]]).T
+    scale_u = ca.DM([model["Fd_max"], abs(model["Fb_max"]),
+                    0.4, model["mass"] * 50.0]).T
     scale_t = 1.0
 
     # cost

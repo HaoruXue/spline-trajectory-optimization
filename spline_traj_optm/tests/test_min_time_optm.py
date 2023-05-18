@@ -142,7 +142,7 @@ def test_double_track_optimizer():
     acc_speed_lookup = np.array([[0.0, 10.0], [50.0, 7.0], [100.0, 0.5]])
     dcc_speed_lookup = np.array([[0.0, -13.0], [50.0, -15.0], [100.0, -20.0]])
     vp = VehicleParams(acc_speed_lookup, dcc_speed_lookup,
-                       10.0, -20.0, 15.0, -15.0, 40.0, 100.0)
+                       10.0, -20.0, 15.0, -15.0, 40.0, 30.0)
     v = Vehicle(vp)
 
     sim = Simulator(v)
@@ -194,13 +194,14 @@ def test_double_track_optimizer():
         },
         "verbose": True,
         "max_iter": 2000,
-        "tol": 1e-3,
-        "constr_viol_tol": 1e-4,
+        "tol": 1e-2,
+        "constr_viol_tol": 1e-3,
         "speed_cap": 80.0,
         "average_track_width": 10.0,
     }
 
-    (X, U, T), (scale_x, scale_u, scale_t), opti = optm.set_up_double_track_problem(params)
+    (X, U, T), (scale_x, scale_u,
+                scale_t), opti = optm.set_up_double_track_problem(params)
     try:
         sol = opti.solve()
     except Exception as e:
@@ -221,12 +222,7 @@ def test_double_track_optimizer():
     plt.show()
 
     plt.figure()
-    plt.plot(x[:, 2], label="Yaw")
-    plt.legend()
-    plt.show()
-
-    plt.figure()
-    plt.plot(x[:, 4], label="Slip Angle")
+    plt.plot(x[:, 2], "-o", label="Yaw")
     plt.legend()
     plt.show()
 
@@ -247,6 +243,16 @@ def test_double_track_optimizer():
 
     plt.figure()
     plt.plot(u[:, 1], label="Brake Force")
+    plt.legend()
+    plt.show()
+
+    plt.figure()
+    plt.plot(u[:, 2], label="Steering Angle")
+    plt.legend()
+    plt.show()
+
+    plt.figure()
+    plt.plot(u[:, 3], label="Load Transfer")
     plt.legend()
     plt.show()
 

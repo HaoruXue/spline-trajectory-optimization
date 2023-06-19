@@ -254,3 +254,40 @@ class BSplineTrajectory:
     def load(f):
         with open(f, "rb") as input_file:
             return pickle.load(input_file)
+
+def save_ttl(ttl_path: str, trajectory: Trajectory):
+    with open(ttl_path, "w") as f:
+        header = ",".join(
+            [
+                str(15),
+                str(len(trajectory)),
+                str(trajectory[0, Trajectory.DIST_TO_SF_FWD]),
+            ]
+        )
+        # if trajectory.origin is not None:
+        #     header += "," + ",".join([str(x) for x in trajectory.origin])
+        f.write(header)
+        f.write("\n")
+
+        def save_row(row: np.ndarray):
+            vals = [
+                str(row[Trajectory.X]),
+                str(row[Trajectory.Y]),
+                str(row[Trajectory.Z]),
+                str(row[Trajectory.YAW]),
+                str(row[Trajectory.SPEED]),
+                str(row[Trajectory.CURVATURE]),
+                str(row[Trajectory.DIST_TO_SF_BWD]),
+                str(row[Trajectory.DIST_TO_SF_FWD]),
+                str(int(row[Trajectory.REGION])),
+                str(row[Trajectory.LEFT_BOUND_X]),
+                str(row[Trajectory.LEFT_BOUND_Y]),
+                str(row[Trajectory.RIGHT_BOUND_X]),
+                str(row[Trajectory.RIGHT_BOUND_Y]),
+                str(row[Trajectory.BANK]),
+                str(row[Trajectory.LON_ACC]),
+                str(row[Trajectory.LAT_ACC]),
+                str(row[Trajectory.TIME]),
+            ]
+            f.writelines([','.join(vals) + '\n'])
+        np.apply_along_axis(save_row, 1, trajectory.points)

@@ -8,6 +8,6 @@ def global_to_frenet(p, p0, yaw):
     return R @ (p - p0)
 
 def align_yaw(yaw1, yaw2):
-    k = ca.fabs(yaw2-yaw1)+ca.pi
-    l = k - ca.fmod(ca.fabs(yaw2-yaw1)+ca.pi, 2 * ca.pi)
-    return yaw1 + l * ca.sign(yaw2 - yaw1)
+    d_yaw = yaw1 - yaw2
+    d_yaw = ca.atan2(ca.sin(d_yaw), ca.cos(d_yaw))
+    return d_yaw + yaw2

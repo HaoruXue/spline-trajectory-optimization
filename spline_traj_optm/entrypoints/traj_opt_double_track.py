@@ -6,7 +6,7 @@ import os
 import yaml
 
 from spline_traj_optm.tests.test_trajectory import get_bspline, get_trajectory_array
-from spline_traj_optm.models.trajectory import Trajectory
+from spline_traj_optm.models.trajectory import Trajectory, save_ttl
 import spline_traj_optm.models.double_track as dt_dyn
 from spline_traj_optm.models.race_track import RaceTrack
 import spline_traj_optm.min_time_optm.min_time_optimizer as optm
@@ -49,6 +49,16 @@ def main():
         [traj_d[:, Trajectory.X:Trajectory.Y+1], np.zeros((len(traj_d), 4))])
     u = opti.debug.value(U) * scale_u
     t = opti.debug.value(T) * scale_t
+
+    opt_traj_d = traj_d.copy()
+    opt_traj_d[:, 0:2] = x[:, 0:2]
+    opt_traj_d[:, Trajectory.YAW] = x[:, 2]
+    opt_traj_d[:, Trajectory.SPEED] = x[:, 5]
+    race_track.fill_trajectory_boundaries(opt_traj_d)
+    save_ttl(params["output"], opt_traj_d)
+    ca.DM(x).to_file("x_optm.txt", "txt")
+    ca.DM(u).to_file("u_optm.txt", "txt")
+    ca.DM(t).to_file("t_optm.txt", "txt")
 
     plt.figure()
     plt.plot(x[:, 0], x[:, 1], "-o")

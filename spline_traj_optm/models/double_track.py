@@ -108,8 +108,8 @@ def dynamics(model_dict, x, u):
                            + ((Fy_fl + Fy_fr) * ca.cos(delta) + (Fx_fl + Fx_fr) * ca.sin(delta)) * lf)
 
     # cg position
-    x_dot = v * ca.cos(phi)
-    y_dot = v * ca.sin(phi)
+    x_dot = v * ca.cos(phi + beta)
+    y_dot = v * ca.sin(phi + beta)
 
     X_dot = ca.vertcat(x_dot, y_dot, omega, omega_dot, beta_dot, v_dot)
 

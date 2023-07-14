@@ -11,3 +11,8 @@ def align_yaw(yaw1, yaw2):
     d_yaw = yaw1 - yaw2
     d_yaw = ca.atan2(ca.sin(d_yaw), ca.cos(d_yaw))
     return d_yaw + yaw2
+
+def align_abscissa(s1, s2, total_length):
+    k = ca.fabs(s2 - s1) + total_length / 2.0
+    l = k - ca.fmod(ca.fabs(s2 - s1) + total_length / 2.0, total_length)
+    return s1 + l * ca.sign(s2 - s1)

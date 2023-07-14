@@ -7,8 +7,10 @@ import spline_traj_optm.utils.utils as utils
 GRAVITY = 9.8
 
 
-def dynamics(model_dict, x, u):
-    phi = x[2]  # yaw
+def dynamics(model_dict, x, u, race_track=None, k=None):
+    px = x[0]
+    py = x[1]
+    phi = x[2]  # yaw in frenet frame or global frame
     omega = x[3]  # yaw rate
     beta = x[4]  # slip angle
     v = x[5]  # velocity magnitude
@@ -110,8 +112,12 @@ def dynamics(model_dict, x, u):
     # cg position
     x_dot = v * ca.cos(phi + beta)
     y_dot = v * ca.sin(phi + beta)
+    phi_dot = omega
+    if race_track is not None:
+        x_dot /= (1 - py * k)
+        phi_dot -= k * x_dot
 
-    X_dot = ca.vertcat(x_dot, y_dot, omega, omega_dot, beta_dot, v_dot)
+    X_dot = ca.vertcat(x_dot, y_dot, phi_dot, omega_dot, beta_dot, v_dot)
 
     Fxij = (Fx_fl, Fx_fr, Fx_rl, Fx_rr)
     Fyij = (Fy_fl, Fy_fr, Fy_rl, Fy_rr)
@@ -128,7 +134,7 @@ def nu():
     return 4
 
 
-def add_constraints(model_dict, opti, x, u, t, xip1, uip1):
+def add_constraints(model_dict, opti, x, u, t, xip1, uip1, race_track=None, k=None):
     # tyre constraints
     v = x[5]  # velocity magnitude
     fd = u[0]  # drive force
@@ -154,10 +160,12 @@ def add_constraints(model_dict, opti, x, u, t, xip1, uip1):
     # dynamics constraint
     temp = ca.MX(xip1)
     temp[0, 2] = utils.align_yaw(temp[0, 2], x[0, 2])
-    f1, tyres = dynamics(model_dict, x, u)
-    f2, _ = dynamics(model_dict, temp, u)
+    if race_track is not None:
+        temp[0, 0] = utils.align_abscissa(temp[0, 0], x[0, 0], race_track.center_s.get_length())
+    f1, tyres = dynamics(model_dict, x, u, race_track, k)
+    f2, _ = dynamics(model_dict, temp, u, race_track, k)
     xm = 0.5 * (x + temp) + (t / 8.0) * (f1.T - f2.T)
-    fm, _ = dynamics(model_dict, xm, u)
+    fm, _ = dynamics(model_dict, xm, u, race_track, k)
     opti.subject_to(x + (t / 6.0) * (f1.T + 4 * fm.T + f2.T) - temp == 0)
 
     Fxij, Fyij, Fzij = tyres

@@ -52,7 +52,7 @@ def set_up_bicycle_problem(params):
         ui = U[i-1, :] * scale_u
         ti = T[i-1]
 
-        opti.subject_to(integrator.hermite_simpson(model, dynamics,
+        opti.subject_to(integrator.rk4(model, dynamics,
                         xi, xip1, ui, ti) == 0)
 
         # boundary constraint in frenet frame
@@ -84,7 +84,8 @@ def set_up_bicycle_problem(params):
     print_lvl = 5 if params["verbose"] else 0
     p_opts = {"expand": True}
     s_opts = {"max_iter": params["max_iter"], "tol": params["tol"],
-              "constr_viol_tol": params["constr_viol_tol"], "print_level": print_lvl}
+              "constr_viol_tol": params["constr_viol_tol"], "print_level": print_lvl,
+              "nlp_scaling_method": "none"}
     opti.solver('ipopt', p_opts, s_opts)
 
     return X, U, T, opti
@@ -92,29 +93,27 @@ def set_up_bicycle_problem(params):
 
 def set_up_double_track_problem(params):
     N = params["N"]
+    model = params["model"]
+    race_track = params["race_track"]
     traj_d = params["traj_d"]
     nu = dt_dyn.nu()
     nx = dt_dyn.nx()
-    model = params["model"]
 
     opti = ca.Opti("nlp")
     X = opti.variable(N, nx)
     U = opti.variable(N, nu)
     T = opti.variable(N)
 
-    P0 = ca.DM(traj_d[:, Trajectory.X:Trajectory.Y+1])
-    X_OFFSET = ca.horzcat(P0, ca.DM.zeros(N, nx-2))
-    Yaws = ca.DM(traj_d[:, Trajectory.YAW])
+    S0 = ca.DM(race_track.abscissa)
+    X_OFFSET = ca.horzcat(S0, ca.DM.zeros(N, nx-1))
+    # Yaws = ca.DM(traj_d[:, Trajectory.YAW])
     Velocities = ca.DM(traj_d[:, Trajectory.SPEED])
     Times = ca.DM(traj_d[:, Trajectory.TIME])
-    BoundL = ca.DM(
-        traj_d[:, Trajectory.LEFT_BOUND_X:Trajectory.LEFT_BOUND_Y+1])
-    BoundR = ca.DM(
-        traj_d[:, Trajectory.RIGHT_BOUND_X:Trajectory.RIGHT_BOUND_Y+1])
-    scale_x = ca.DM([params["average_track_width"],
-                    params["average_track_width"], 3.14, 1.0, 0.5, params["speed_cap"]]).T
+    BoundL = race_track.left_intp(S0)
+    BoundR = race_track.right_intp(S0)
+    scale_x = ca.DM([1.0, params["average_track_width"], 1.0, 1.0, 0.5, params["speed_cap"]]).T
     scale_u = ca.DM([model["Fd_max"], abs(model["Fb_max"]),
-                    0.4, model["mass"] * 50.0]).T
+                    model["delta_max"], model["mass"] * 50.0]).T
     scale_t = 1.0
 
     # cost
@@ -129,26 +128,22 @@ def set_up_double_track_problem(params):
         ti = T[i-1] * scale_t
 
         # boundary constraint in frenet frame
-        p = X[i-1, 0:2] * scale_x[0:2]
-        p0 = P0[i-1, :]
-        pf = utils.global_to_frenet(p.T, ca.DM.zeros(2, 1), Yaws[i-1])
-        dl = ca.norm_2(BoundL[i-1, :] - p0)
-        dr = ca.norm_2(BoundR[i-1, :] - p0) * -1.0
-        # opti.subject_to(opti.bounded(-1e-1, pf[0], 1e-1))
-        opti.subject_to(pf[0] == 0)
+        opti.subject_to(xi[0] == X_OFFSET[i-1, 0])
+        dr = BoundR[i-1]
+        dl = BoundL[i-1]
         margin = model["vehicle_width"] / 2.0 + model["safety_margin"]
         assert dr + margin < dl - margin, f"Track width must be wider than vehicle width plus 2 * safety margin at point {i}."
-        opti.subject_to(opti.bounded(dr + margin, pf[1], dl - margin))
+        opti.subject_to(opti.bounded(dr + margin, xi[1], dl - margin))
 
         # model constraints
-        dt_dyn.add_constraints(model, opti, xi, ui, ti, xip1, uip1)
+        dt_dyn.add_constraints(model, opti, xi, ui, ti, xip1, uip1, race_track, race_track.curvature_intp(S0[i-1]))
 
         # time constraint
         opti.subject_to(0.0 <= ti)
 
         # initial condition
         opti.set_initial(
-            X[i-1, :] * scale_x, ca.DM([0.0, 0.0, Yaws[i-1], 0.0, 0.0, Velocities[i-1]]))
+            X[i-1, :] * scale_x, ca.DM([0.0, 0.0, 0.0, 0.0, 0.0, Velocities[i-1]]))
         u0 = ca.DM([1.0, -1.0, 0.001, 0.0])
         opti.set_initial(ui, u0)
         opti.set_initial(ti, Times[i-1])

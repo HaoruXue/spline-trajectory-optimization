@@ -5,12 +5,13 @@ Spline-based Trajectory Optimization tool for Autonomous Racing (Indy Autonomous
 ## Install
 
 1. Install `SciPy`, `matplotlib`, `shapely`.
-2. Install Julia 1.8.5+.
+2. For min curvature problem, install Julia 1.8.5+.
 3. Clone this repository and install with `pip install -e .`.
 
 ## Run
 
-Run `julia/spline_traj_opt.ipynb`.
+- For min curvature problem, run `julia/spline_traj_opt.ipynb`.
+- For min time problem, copy `traj_opt_double_track.yaml` in `spline_traj_optm/min_time_otpm/example` to your workspace, and execute `traj_opt_double_track`.
 
 ## Repository Organization
 

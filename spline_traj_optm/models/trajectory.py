@@ -118,6 +118,19 @@ class Trajectory:
 
         np.apply_along_axis(calc_left_right_bounds, 1, self.points)
 
+    def fill_distance(self):
+        dists = np.zeros(len(self.points), dtype=np.float64)
+        for i in range(len(self.points)):
+            j = i + 1 if i < len(self.points) - 1 else 0
+            dists[i] = self.distance(self.points[i, :], self.points[j, :])
+
+        self.points[0, Trajectory.DIST_TO_SF_BWD] = 0.0
+        self.points[1:, Trajectory.DIST_TO_SF_BWD] = dists[:-1]
+        self.points[:, Trajectory.DIST_TO_SF_BWD] = np.cumsum(self.points[:, Trajectory.DIST_TO_SF_BWD])
+
+        track_length = np.sum(dists)
+        self.points[:, Trajectory.DIST_TO_SF_FWD] = track_length - self.points[:, Trajectory.DIST_TO_SF_BWD]
+
     def fill_time(self):
         # Check for zero speeds
         for pt in self.points:
@@ -143,10 +156,7 @@ class Trajectory:
             #                                                   Trajectory.TIME]
 
     def distance(self, pt1, pt2):
-        return np.sqrt(
-            (pt1[Trajectory.X] - pt2[Trajectory.X]) ** 2
-            + (pt1[Trajectory.Y] - pt2[Trajectory.Y]) ** 2
-        )
+        return np.linalg.norm(pt1[Trajectory.X:Trajectory.Y+1] - pt2[Trajectory.X:Trajectory.Y+1])
 
     def ts(self):
         return np.linspace(0.0, 1.0, self.__len__(), endpoint=False)

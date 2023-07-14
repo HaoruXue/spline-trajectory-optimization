@@ -82,24 +82,25 @@ class Simulator:
         # Find points on track with max curvatures
         def find_turns() -> np.ndarray:
 
-            # We only consider curves whose radius is too small for full speed.
-            accs = self.vehicle.lookup_acc_circle(lon=0.0)
-            full_speed_lat_acc = max(accs[0], accs[1] * -1.0) # right acc is negative. flip it.
-            min_curvature_for_full_speed = self.calc_r(
-                full_speed_lat_acc, self.vehicle.param.max_speed_mps, 0.0
-            )
+            # # We only consider curves whose radius is too small for full speed.
+            # accs = self.vehicle.lookup_acc_circle(lon=0.0)
+            # full_speed_lat_acc = max(accs[0], accs[1] * -1.0) # right acc is negative. flip it.
+            # min_curvature_for_full_speed = self.calc_r(
+            #     full_speed_lat_acc, self.vehicle.param.max_speed_mps, 0.0
+            # )
 
-            bottle_necks = []
-            for i in range(len(trajectory_out)):
-                last_curvature = trajectory_out[trajectory_out.dec(i), Trajectory.CURVATURE]
-                this_curvature = trajectory_out[i, Trajectory.CURVATURE]
-                next_curvature = trajectory_out[trajectory_out.inc(i), Trajectory.CURVATURE]
-                # if last_curvature > this_curvature or next_curvature > this_curvature:
-                if this_curvature < min_curvature_for_full_speed:
-                    bottle_necks.append(i)
-            return np.array(bottle_necks, dtype=int)
+            # bottle_necks = []
+            # for i in range(len(trajectory_out)):
+            #     last_curvature = trajectory_out[trajectory_out.dec(i), Trajectory.CURVATURE]
+            #     this_curvature = trajectory_out[i, Trajectory.CURVATURE]
+            #     next_curvature = trajectory_out[trajectory_out.inc(i), Trajectory.CURVATURE]
+            #     # if last_curvature > this_curvature or next_curvature > this_curvature:
+            #     if this_curvature < min_curvature_for_full_speed:
+            #         bottle_necks.append(i)
+            # return np.array(bottle_necks, dtype=int)
             # return np.random.choice(np.arange(len(trajectory_out)), size=int(len(trajectory_out) * 0.7), replace=False)
             # return np.random.choice(np.arange(len(trajectory_out)), size=len(trajectory_out), replace=False)
+            return np.arange(len(trajectory_out))
 
         # Start by identifying where the turns are
         turns = np.array(find_turns())
@@ -160,6 +161,7 @@ class Simulator:
                     dd = calc_distance(last_enter_pt, enter_pt)
 
                     # Get the possible speed ranges from the last state
+                    np.seterr(all='raise')
                     dt = dd / last_enter_pt[Trajectory.SPEED]
                     max_dacc = dt * self.vehicle.param.max_jerk
                     max_acc = last_enter_pt[Trajectory.LON_ACC] + max_dacc
@@ -237,8 +239,15 @@ class Simulator:
                         if max_greedy_speed > max_curve_speed or max_greedy_speed < min_state_speed:
                             idx = enter_pt[Trajectory.IDX]
                             new_flags.append(np.array([idx, idx, idx, 0, 0]))
-                            enter_pt[Trajectory.SPEED] = min(max_curve_speed, max_greedy_speed)
-                            enter_pt[Trajectory.LON_ACC] = last_enter_pt[Trajectory.LON_ACC]
+                            enter_pt[Trajectory.SPEED] = min(
+                                self.calc_v(
+                                    self.vehicle.lookup_acc_circle(lon=0.0)[0],
+                                    enter_pt[Trajectory.CURVATURE],
+                                    enter_pt[Trajectory.BANK]
+                                ),
+                                self.vehicle.param.max_speed_mps,
+                            )
+                            enter_pt[Trajectory.LON_ACC] = 0.0
                             enter_pt[Trajectory.LAT_ACC] = self.calc_lat_acc(
                                 enter_pt[Trajectory.SPEED], enter_pt[Trajectory.CURVATURE], enter_pt[Trajectory.BANK]
                             )
@@ -353,7 +362,7 @@ class Simulator:
                 #     break
                 if len(iteration_flags) == 0:
                     break
-                itr += 1      
+                itr += 1
 
         iterate(iteration_flags)
 

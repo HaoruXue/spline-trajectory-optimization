@@ -4,7 +4,7 @@ Spline-based Trajectory Optimization tool for Autonomous Racing (Indy Autonomous
 
 ## Install
 
-1. Install `SciPy`, `matplotlib`, `shapely`.
+1. Install `SciPy`, `matplotlib`, `shapely`, `casadi`, `bezier`.
 2. For min curvature problem, install Julia 1.8.5+.
 3. Clone this repository and install with `pip install -e .`.
 

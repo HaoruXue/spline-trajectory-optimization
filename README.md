@@ -4,7 +4,7 @@ Spline-based Trajectory Optimization tool for Autonomous Racing (Indy Autonomous
 
 ## Install
 
-1. Install `SciPy`, `matplotlib`, `shapely`.
+1. Install `SciPy`, `matplotlib`, `shapely`, `pandas`
 2. Install Julia 1.8.5+.
 3. Clone this repository and install with `pip install -e .`.
 
@@ -21,3 +21,4 @@ Run `julia/spline_traj_opt.ipynb`.
 - `spline_traj_optm/tests`: Tests for the package
 - `spline_traj_optm/visualization`: Functions for visualization the optimization and simulation results
 - `julia/spline_traj_opt.ipynb`: Julia notebook of the optimization notebook
+- `julia/utils/find_center_line.py`: Python file for generating center line, given the inner and outer track boundaries (CSV files) as inputs.

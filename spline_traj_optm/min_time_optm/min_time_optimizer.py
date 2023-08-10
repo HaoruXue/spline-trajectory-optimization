@@ -83,8 +83,7 @@ def set_up_bicycle_problem(params):
 
     print_lvl = 5 if params["verbose"] else 0
     p_opts = {"expand": True}
-    s_opts = {"max_iter": params["max_iter"], "tol": params["tol"],
-              "constr_viol_tol": params["constr_viol_tol"], "print_level": print_lvl,
+    s_opts = {"max_iter": params["max_iter"], "tol": params["tol"], "print_level": print_lvl,
               "nlp_scaling_method": "none"}
     opti.solver('ipopt', p_opts, s_opts)
 
@@ -142,16 +141,20 @@ def set_up_double_track_problem(params):
         opti.subject_to(0.0 <= ti)
 
         # initial condition
-        opti.set_initial(
-            X[i-1, :] * scale_x, ca.DM([0.0, 0.0, 0.0, 0.0, 0.0, Velocities[i-1]]))
-        u0 = ca.DM([1.0, -1.0, 0.001, 0.0])
-        opti.set_initial(ui, u0)
-        opti.set_initial(ti, Times[i-1])
+        if ("x0" not in params):
+            opti.set_initial(
+                X[i-1, :] * scale_x, ca.DM([0.0, 0.0, 0.0, 0.0, 0.0, Velocities[i-1]]))
+            u0 = ca.DM([1.0, -1.0, 0.001, 0.0])
+            opti.set_initial(ui, u0)
+            opti.set_initial(ti, Times[i-1])
+        else:
+            opti.set_initial(X[i-1, :] * scale_x, params["x0"][i-1, :] - X_OFFSET[i-1, :])
+            opti.set_initial(ui * scale_u, params["u0"][i-1, :])
+            opti.set_initial(ti * scale_t, params["t0"][i-1, :])
 
     print_lvl = 5 if params["verbose"] else 0
     p_opts = {"expand": True}
-    s_opts = {"max_iter": params["max_iter"], "tol": params["tol"],
-              "constr_viol_tol": params["constr_viol_tol"], "print_level": print_lvl}
+    s_opts = {"max_iter": params["max_iter"], "tol": params["tol"], "print_level": print_lvl}
     opti.solver('ipopt', p_opts, s_opts)
 
     return (X, U, T), (scale_x, scale_u, scale_t), opti

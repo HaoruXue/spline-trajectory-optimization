@@ -32,21 +32,26 @@ def main():
     traj_d = race_track.center_d.copy()
     race_track.fill_trajectory_boundaries(traj_d)
 
-    estimates = params["estimates"]
-    acc_speed_lookup = np.array(estimates["acc_speed_loopup"])
-    dcc_speed_lookup = np.array(estimates["dcc_speed_lookup"])
-    vp = VehicleParams(acc_speed_lookup, dcc_speed_lookup,
-                       estimates["max_lon_acc_mpss"],
-                       estimates["max_lon_dcc_mpss"],
-                       estimates["max_left_acc_mpss"],
-                       estimates["max_right_acc_mpss"],
-                       estimates["max_speed_mps"],
-                       estimates["max_jerk_mpsc"])
-    v = Vehicle(vp)
+    if ("x0" not in params):
+        estimates = params["estimates"]
+        acc_speed_lookup = np.array(estimates["acc_speed_loopup"])
+        dcc_speed_lookup = np.array(estimates["dcc_speed_lookup"])
+        vp = VehicleParams(acc_speed_lookup, dcc_speed_lookup,
+                        estimates["max_lon_acc_mpss"],
+                        estimates["max_lon_dcc_mpss"],
+                        estimates["max_left_acc_mpss"],
+                        estimates["max_right_acc_mpss"],
+                        estimates["max_speed_mps"],
+                        estimates["max_jerk_mpsc"])
+        v = Vehicle(vp)
+        sim = Simulator(v)
+        result = sim.run_simulation(traj_d, False)
+        traj_d = result.trajectory
+    else:
+        params["x0"] = ca.DM.from_file(params["x0"], "txt")
+        params["u0"] = ca.DM.from_file(params["u0"], "txt")
+        params["t0"] = ca.DM.from_file(params["t0"], "txt")
 
-    sim = Simulator(v)
-    result = sim.run_simulation(traj_d, False)
-    traj_d = result.trajectory
     params["N"] = len(traj_d)
     params["traj_d"] = traj_d
     params["race_track"] = race_track
@@ -62,6 +67,8 @@ def main():
         [race_track.abscissa[:, np.newaxis], np.zeros((len(traj_d), 5))])
     u = opti.debug.value(U) * scale_u
     t = opti.debug.value(T) * scale_t
+
+    ca.DM(traj_d.points[:, :Trajectory.TIME+1]).to_file("ttl_input.txt", "txt")
 
     opt_traj_d = traj_d.copy()
     global_pose = race_track.frenet_to_global(x[:, 0].T, x[:, 1].T, x[:, 2].T)

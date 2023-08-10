@@ -171,6 +171,7 @@ setup(
     entry_points={  # Optional
         "console_scripts": [
             "traj_opt_double_track=spline_traj_optm.entrypoints.traj_opt_double_track:main",
+            "traj_opt_encode_region=spline_traj_optm.entrypoints.traj_opt_encode_region:main",
         ],
     },
     # List additional URLs that are relevant to your project as a dict.

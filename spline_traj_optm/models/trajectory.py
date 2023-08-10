@@ -1,10 +1,26 @@
+from dataclasses import dataclass
 import numpy as np
 import copy
 from scipy import interpolate
 from scipy.interpolate import BSpline
 from scipy.integrate import quad
-from shapely.geometry import Point, LinearRing, GeometryCollection, LineString, MultiPoint
+from shapely.geometry import Point, LinearRing, GeometryCollection, LineString, MultiPoint, Polygon
 import pickle
+
+
+@dataclass
+class Region:
+    name: str
+    code: int
+    vertices: np.ndarray  # n * 2
+
+
+@dataclass
+class Bound:
+    name: str
+    type: str
+    vertices: np.ndarray
+
 
 class Trajectory:
     X = 0
@@ -27,7 +43,9 @@ class Trajectory:
     IDX = 17
     ITERATION_FLAG = 18
 
-    def __init__(self, num_point: int) -> None:
+    def __init__(self, num_point: int, ttl_num: int = 0, origin=None) -> None:
+        self.ttl_num = ttl_num
+        self.origin = origin
         self.points = np.zeros((num_point, 19), dtype=np.float64)
         self.points[:, Trajectory.IDX] = np.arange(0, len(self.points), 1)
         self.points[:, Trajectory.ITERATION_FLAG] = -1
@@ -63,12 +81,14 @@ class Trajectory:
             return idx - 1
 
     def fill_bounds(self, left_poly, right_poly, max_dist=100.0):
-        def find_intersect(wp:np.ndarray, poly: LinearRing, norm, max_dist):
+        def find_intersect(wp: np.ndarray, poly: LinearRing, norm, max_dist):
             yaw_tan, x, y = wp[Trajectory.YAW], wp[Trajectory.X], wp[Trajectory.Y]
             traj_pt = Point(x, y)
             yaw_norm = yaw_tan + norm
-            max_norm = (x + max_dist * np.cos(yaw_norm), y + max_dist * np.sin(yaw_norm))
-            min_norm = (x + max_dist * np.cos(yaw_norm + np.pi), y + max_dist * np.sin(yaw_norm + np.pi))
+            max_norm = (x + max_dist * np.cos(yaw_norm),
+                        y + max_dist * np.sin(yaw_norm))
+            min_norm = (x + max_dist * np.cos(yaw_norm + np.pi),
+                        y + max_dist * np.sin(yaw_norm + np.pi))
             line_norm = LineString((min_norm, max_norm))
             some_intersects = line_norm.intersection(poly)
             this_some_distance = max_dist
@@ -109,8 +129,10 @@ class Trajectory:
             return this_some_distance, this_some_intersection
 
         def calc_left_right_bounds(wp):
-            _, left_bound = find_intersect(wp, left_poly, np.pi / 2.0, max_dist)
-            _, right_bound = find_intersect(wp, right_poly, -np.pi / 2.0, max_dist)
+            _, left_bound = find_intersect(
+                wp, left_poly, np.pi / 2.0, max_dist)
+            _, right_bound = find_intersect(
+                wp, right_poly, -np.pi / 2.0, max_dist)
             wp[Trajectory.LEFT_BOUND_X] = left_bound.x
             wp[Trajectory.LEFT_BOUND_Y] = left_bound.y
             wp[Trajectory.RIGHT_BOUND_X] = right_bound.x
@@ -126,10 +148,12 @@ class Trajectory:
 
         self.points[0, Trajectory.DIST_TO_SF_BWD] = 0.0
         self.points[1:, Trajectory.DIST_TO_SF_BWD] = dists[:-1]
-        self.points[:, Trajectory.DIST_TO_SF_BWD] = np.cumsum(self.points[:, Trajectory.DIST_TO_SF_BWD])
+        self.points[:, Trajectory.DIST_TO_SF_BWD] = np.cumsum(
+            self.points[:, Trajectory.DIST_TO_SF_BWD])
 
         track_length = np.sum(dists)
-        self.points[:, Trajectory.DIST_TO_SF_FWD] = track_length - self.points[:, Trajectory.DIST_TO_SF_BWD]
+        self.points[:, Trajectory.DIST_TO_SF_FWD] = track_length - \
+            self.points[:, Trajectory.DIST_TO_SF_BWD]
 
     def fill_time(self):
         # Check for zero speeds
@@ -155,6 +179,20 @@ class Trajectory:
             # self.points[next, Trajectory.TIME] += self.points[this,
             #                                                   Trajectory.TIME]
 
+    def fill_region(self, regions: list):
+        polygons = []
+        for region in regions:
+            polygons.append((Polygon(region.vertices.tolist()), region.code))
+
+        def p_in_p(row: np.ndarray):
+            p = Point([row[Trajectory.X], row[Trajectory.Y]])
+            for polygon, code in polygons:
+                if polygon.contains(p):
+                    row[Trajectory.REGION] = code
+                    return
+
+        np.apply_along_axis(p_in_p, 1, self.points)
+
     def distance(self, pt1, pt2):
         return np.linalg.norm(pt1[Trajectory.X:Trajectory.Y+1] - pt2[Trajectory.X:Trajectory.Y+1])
 
@@ -170,12 +208,14 @@ class Trajectory:
         traj.points = arr
         return traj
 
+
 class BSplineTrajectory:
     def __init__(self, coordinates: np.ndarray, s: float, k: int):
         assert coordinates.shape[0] >= 3 and coordinates.shape[1] == 2 and len(
             coordinates.shape) == 2, "coordinates should be N * 2"
         # close the loop
-        coordinates_close_loop = np.vstack([coordinates, coordinates[0, np.newaxis, :]])
+        coordinates_close_loop = np.vstack(
+            [coordinates, coordinates[0, np.newaxis, :]])
         tck, u = interpolate.splprep(
             [coordinates_close_loop[:, 0], coordinates_close_loop[:, 1]], s=s, per=True, k=k)
         self._spl_x = BSpline(tck[0], tck[1][0], tck[2])
@@ -186,7 +226,7 @@ class BSplineTrajectory:
         return np.sqrt(interpolate.splev(t, self._spl_x, der=1) ** 2 + interpolate.splev(t, self._spl_y, der=1) ** 2)
 
     def __get_section_length(self, t_min: float, t_max: float):
-        length, err = quad(self.__integrate_length, t_min, t_max, limit=200)
+        length, err = quad(self.__integrate_length, t_min, t_max, limit=1000)
         return length
 
     def eval_sectional_length(self, ts):
@@ -215,7 +255,8 @@ class BSplineTrajectory:
         dy = interpolate.splev(t, self._spl_y, der=1)
         d2x = interpolate.splev(t, self._spl_x, der=2)
         d2y = interpolate.splev(t, self._spl_y, der=2)
-        curvature = (dx * d2y - dy * d2x) / np.sqrt((dx ** 2 + dy ** 2) ** 3)
+        curvature = np.abs(dx * d2y - dy * d2x) / \
+            np.sqrt((dx ** 2 + dy ** 2) ** 3)
         return 1.0 / (np.abs(curvature))
 
     def get_length(self):
@@ -224,7 +265,7 @@ class BSplineTrajectory:
     def eval_yaw(self, t):
         return self.__get_yaw(t)
 
-    def sample_along(self, interval: float=None, ts=None) -> Trajectory:
+    def sample_along(self, interval: float = None, ts=None) -> Trajectory:
         if interval is not None:
             total_length = self.get_length()
             num_sample = int(total_length // interval)
@@ -242,9 +283,11 @@ class BSplineTrajectory:
         for i in range(len(traj)):
             if i == 0:
                 continue
-            traj[i, Trajectory.DIST_TO_SF_BWD] = traj[i-1, Trajectory.DIST_TO_SF_BWD] + self.__get_section_length(ts[i-1], ts[i])
-        traj[:, Trajectory.DIST_TO_SF_FWD] = self._length - traj[:, Trajectory.DIST_TO_SF_BWD]
-   
+            traj[i, Trajectory.DIST_TO_SF_BWD] = traj[i-1,
+                                                      Trajectory.DIST_TO_SF_BWD] + self.__get_section_length(ts[i-1], ts[i])
+        traj[:, Trajectory.DIST_TO_SF_FWD] = self._length - \
+            traj[:, Trajectory.DIST_TO_SF_BWD]
+
         return traj
 
     def copy(self):
@@ -265,17 +308,18 @@ class BSplineTrajectory:
         with open(f, "rb") as input_file:
             return pickle.load(input_file)
 
+
 def save_ttl(ttl_path: str, trajectory: Trajectory):
     with open(ttl_path, "w") as f:
         header = ",".join(
             [
-                str(15),
+                str(trajectory.ttl_num),
                 str(len(trajectory)),
                 str(trajectory[0, Trajectory.DIST_TO_SF_FWD]),
             ]
         )
-        # if trajectory.origin is not None:
-        #     header += "," + ",".join([str(x) for x in trajectory.origin])
+        if trajectory.origin is not None:
+            header += "," + ",".join([str(x) for x in trajectory.origin])
         f.write(header)
         f.write("\n")
 
@@ -301,3 +345,14 @@ def save_ttl(ttl_path: str, trajectory: Trajectory):
             ]
             f.writelines([','.join(vals) + '\n'])
         np.apply_along_axis(save_row, 1, trajectory.points)
+
+
+def load_ttl(ttl_path: str) -> Trajectory:
+    with open(ttl_path, "r") as f:
+        header = f.readline().split(",")
+        assert len(header) >= 6
+        data = np.loadtxt(ttl_path, dtype=float, delimiter=",", skiprows=1)
+        trajectory = Trajectory(len(data), int(header[0]), (float(
+            header[3]), float(header[4]), float(header[5])))
+        trajectory.points[:, :data.shape[1]] = data
+        return trajectory

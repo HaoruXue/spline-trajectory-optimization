@@ -14,8 +14,8 @@ def dynamics(model_dict, x, u, race_track=None, k=None):
     omega = x[3]  # yaw rate
     beta = x[4]  # slip angle
     v = x[5]  # velocity magnitude
-    fd = u[0]  # drive force
-    fb = u[1]  # brake forcce
+    fd = u[0] * (ca.tanh(u[0]) * 0.5 + 0.5)  # drive force
+    fb = u[0] * (ca.tanh(-u[0]) * 0.5 + 0.5)  # brake force
     delta = u[2]  # front wheel angle
     gamma_y = u[3]  # lateral load transfer
 
@@ -86,14 +86,20 @@ def dynamics(model_dict, x, u, race_track=None, k=None):
                      (v * ca.cos(beta) + 0.5 * twr * omega))
 
     # lateral tyre force Fy (eq. 5)
-    Fy_fl = mu * Fz_fl * (1 + eps_f * Fz_fl / Fz0_f) *  \
-        ca.sin(Cf * ca.arctan(Bf * a_fl - Ef * (Bf * a_fl - ca.arctan(Bf * a_fl))))
-    Fy_fr = mu * Fz_fr * (1 + eps_f * Fz_fr / Fz0_f) * \
-        ca.sin(Cf * ca.arctan(Bf * a_fr - Ef * (Bf * a_fr - ca.arctan(Bf * a_fr))))
-    Fy_rl = mu * Fz_rl * (1 + eps_r * Fz_rl / Fz0_r) * \
-        ca.sin(Cr * ca.arctan(Br * a_rl - Er * (Br * a_rl - ca.arctan(Br * a_rl))))
-    Fy_rr = mu * Fz_rr * (1 + eps_r * Fz_rr / Fz0_r) * \
-        ca.sin(Cr * ca.arctan(Br * a_rr - Er * (Br * a_rr - ca.arctan(Br * a_rr))))
+    # Fy_fl = mu * Fz_fl * (1 + eps_f * Fz_fl / Fz0_f) *  \
+    #     ca.sin(Cf * ca.arctan(Bf * a_fl - Ef * (Bf * a_fl - ca.arctan(Bf * a_fl))))
+    # Fy_fr = mu * Fz_fr * (1 + eps_f * Fz_fr / Fz0_f) * \
+    #     ca.sin(Cf * ca.arctan(Bf * a_fr - Ef * (Bf * a_fr - ca.arctan(Bf * a_fr))))
+    # Fy_rl = mu * Fz_rl * (1 + eps_r * Fz_rl / Fz0_r) * \
+    #     ca.sin(Cr * ca.arctan(Br * a_rl - Er * (Br * a_rl - ca.arctan(Br * a_rl))))
+    # Fy_rr = mu * Fz_rr * (1 + eps_r * Fz_rr / Fz0_r) * \
+    #     ca.sin(Cr * ca.arctan(Br * a_rr - Er * (Br * a_rr - ca.arctan(Br * a_rr))))
+
+    # lateral tyre force simplified (eq. 5)
+    Fy_fl = mu * Fz_fl * ca.sin(Cf * ca.arctan(Bf * a_fl))
+    Fy_fr = mu * Fz_fr * ca.sin(Cf * ca.arctan(Bf * a_fr))
+    Fy_rl = mu * Fz_rl * ca.sin(Cr * ca.arctan(Br * a_rl))
+    Fy_rr = mu * Fz_rr * ca.sin(Cr * ca.arctan(Br * a_rr))
 
     # dynamics (eq. 3a, 3b, 3c)
     v_dot = 1 / m * ((Fx_rl + Fx_rr) * ca.cos(beta) + (Fx_fl + Fx_fr) * ca.cos(delta - beta)
@@ -137,8 +143,8 @@ def nu():
 def add_constraints(model_dict, opti, x, u, t, xip1, uip1, race_track=None, k=None):
     # tyre constraints
     v = x[5]  # velocity magnitude
-    fd = u[0]  # drive force
-    fb = u[1]  # brake forcce
+    fd = u[0] * (ca.tanh(u[0]) * 0.5 + 0.5)  # drive force
+    fb = u[0] * (ca.tanh(-u[0]) * 0.5 + 0.5)  # brake force
     delta = u[2]  # front wheel angle
     gamma_y = u[3]  # lateral load transfer
 
@@ -182,16 +188,18 @@ def add_constraints(model_dict, opti, x, u, t, xip1, uip1, race_track=None, k=No
 
     # static actuator constraint
     opti.subject_to(v * fd <= Pmax)
-    opti.subject_to(v >= 0.0)
-    opti.subject_to(opti.bounded(0.0, fd, Fd_max))
-    opti.subject_to(opti.bounded(Fb_max, fb, 0.0))
-    opti.subject_to(ca.power(fd * fb, 2) <= 1.0)
+    opti.subject_to(v >= 1.0)
+    # opti.subject_to(opti.bounded(0.0, fd, Fd_max))
+    # opti.subject_to(opti.bounded(Fb_max, fb, 0.0))
+    # opti.subject_to(ca.power(fd * fb, 2) <= 1.0)
     # opti.subject_to(fd * fb == 0.0)
+    opti.subject_to(opti.bounded(Fb_max, u[0], Fd_max))
     opti.subject_to(opti.bounded(-delta_max, delta, delta_max))
 
     # dynamic actuator constraint
-    opti.subject_to((uip1[0] - fd) / t <= Fd_max / Td)
-    opti.subject_to((uip1[1] - fb) / t >= Fb_max / Tb)
+    # opti.subject_to((uip1[0] - fd) / t <= Fd_max / Td)
+    # opti.subject_to((uip1[1] - fb) / t >= Fb_max / Tb)
+    opti.subject_to(opti.bounded(Fb_max / Tb, (uip1[0] - u[0]) / t, Fd_max / Td))
     opti.subject_to(opti.bounded(-delta_max / Tdelta,
                     (uip1[2] - delta) / t, delta_max / Tdelta))
 

@@ -117,6 +117,9 @@ def set_up_double_track_problem(params):
 
     # cost
     cost_function = min_time_cost(T)
+    for i in range(N):
+        cost_function += ca.sumsqr(U[i, :]) * 1e-4
+        cost_function += ca.sumsqr(U[i, :] - U[i-1, :]) * 1e-1
     opti.minimize(cost_function)
 
     for i in range(N):

@@ -68,6 +68,8 @@ def main():
     u = opti.debug.value(U) * scale_u
     t = opti.debug.value(T) * scale_t
 
+    print(f"[Optimal lap time: {ca.sum1(t) * scale_t}]")
+
     ca.DM(traj_d.points[:, :Trajectory.TIME+1]).to_file("ttl_input.txt", "txt")
 
     opt_traj_d = traj_d.copy()

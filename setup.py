@@ -172,6 +172,7 @@ setup(
         "console_scripts": [
             "traj_opt_double_track=spline_traj_optm.entrypoints.traj_opt_double_track:main",
             "traj_opt_encode_region=spline_traj_optm.entrypoints.traj_opt_encode_region:main",
+            "traj_opt_convert_to_casadi=spline_traj_optm.entrypoints.traj_opt_convert_to_casadi:main",
         ],
     },
     # List additional URLs that are relevant to your project as a dict.

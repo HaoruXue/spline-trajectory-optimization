@@ -18,7 +18,7 @@ struct SplineTrajectory
         X_closed = [X; X[1]]
         Y_closed = [Y; Y[1]]
         intp = pyimport("scipy.interpolate")
-        tck, u = intp.splprep((X_closed, Y_closed), s=5, per=true, k=k)
+        tck, u = intp.splprep((X_closed, Y_closed), s=3, per=true, k=k)
         coeff_before = k ÷ 2
         coeff_after = k - coeff_before
         B = BK.PeriodicBSplineBasis(BK.BSplineOrder(k), tck[1][k+1:end-k])
@@ -37,6 +37,12 @@ function eval_traj_section(traj_s::SplineTrajectory, t_min::Float64, t_max::Floa
     end
     integral, _ = quadgk(integrate_length, t_min, t_max)
     return integral
+end
+
+function eval_traj_section_derivative(traj_s::SplineTrajectory, t::Float64)
+    spl_x = BK.Derivative(1) * traj_s.spl_x
+    spl_y = BK.Derivative(1) * traj_s.spl_y
+    sqrt(spl_x(t) ^ 2 + spl_y(t) ^ 2)
 end
 
 function eval_traj_length(traj_s::SplineTrajectory)::Float64

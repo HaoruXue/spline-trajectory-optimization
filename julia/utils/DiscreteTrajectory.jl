@@ -1,5 +1,7 @@
 include("SplineTrajectory.jl")
 using Luxor
+using QuadGK
+using Roots
 
 TRAJ_X = 1
 TRAJ_Y = 2
@@ -31,11 +33,26 @@ struct DiscreteTrajectory
     data::Matrix{Float64}
 end
 
-function discretize_trajectory(traj_s::SplineTrajectory, interval::Float64)
+function discretize_trajectory(traj_s::SplineTrajectory, interval::Float64, fast=true)
     traj_length = eval_traj_length(traj_s)
     N = Int(traj_length ÷ interval)
     ts = [range(0.0, 1.0, N + 1);]
     ts = ts[begin:end-1]
+
+    if !fast
+        for i = 1:N
+            # ts[i] = find_zero(t -> (eval_traj_section(traj_s, 0.0, t) - (i-1) * interval, eval_traj_section_derivative(traj_s, t)), ts[i], Roots.Newton())
+            ts[i] = find_zero(t -> eval_traj_section(traj_s, 0.0, t) - (i-1) * interval, ts[i])
+            # scale the remaining ts coordingly to provide better initial guess
+            if i < N
+                ts[i+1:end] = [range(ts[i], 1.0, N - i + 1);][begin:end-1]
+            end
+            # print every 10%
+            if i % (N / 10) == 0
+                println("Discretizing trajectory: $(i / N * 100) %")
+            end
+        end
+    end
 
     x, y = traj_ev(traj_s, ts)
     dx, dy = traj_ev(traj_s, ts, BK.Derivative(1))
@@ -54,7 +71,7 @@ function discretize_trajectory(traj_s::SplineTrajectory, interval::Float64)
     end
     traj_d.data[:, TRAJ_DIST_TO_SF_FWD] = traj_length .- traj_d.data[:, TRAJ_DIST_TO_SF_BWD]
 
-    return traj_d
+    return traj_d, ts
 end
 
 function set_trajectory_metadata!(
@@ -110,9 +127,31 @@ function set_trajectory_bounds(
         left_int = find_closest_intersect(pt, left_ints)
         right_int = find_closest_intersect(pt, right_ints)
 
+        left_left_ints = intersectlinepoly(max_normal, pt, left_poly)
+        right_right_ints = intersectlinepoly(pt, min_normal, right_poly)
+
+        left_left_int = find_closest_intersect(pt, left_left_ints)
+        right_right_int = find_closest_intersect(pt, right_right_ints)
+
+        # if all elements in left_int and left_left_int are numerically close, then the trajectory is inside the polygon
+        if distance(left_int, left_left_int) < 1e-9
+            traj_d.data[i, TRAJ_LON_ACC] = 1.0
+        else
+            traj_d.data[i, TRAJ_LON_ACC] = -1.0
+        end
+
+        if distance(right_int, right_right_int) < 1e-9
+            traj_d.data[i, TRAJ_LAT_ACC] = 1.0
+        else
+            traj_d.data[i, TRAJ_LAT_ACC] = -1.0
+        end
+
         traj_d.data[i, TRAJ_LEFT_BOUND_X] = left_int.x
         traj_d.data[i, TRAJ_LEFT_BOUND_Y] = left_int.y
         traj_d.data[i, TRAJ_RIGHT_BOUND_X] = right_int.x
         traj_d.data[i, TRAJ_RIGHT_BOUND_Y] = right_int.y
     end
+    # print the percentage of TRAJ_LAT_ACC that is -1.0
+    # println(sum(traj_d.data[:, TRAJ_LON_ACC] .== -1.0) / traj_d.N)
+    # println(sum(traj_d.data[:, TRAJ_LAT_ACC] .== -1.0) / traj_d.N)
 end

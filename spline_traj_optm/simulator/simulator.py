@@ -375,9 +375,9 @@ class Simulator:
         return SimulationResult(
             trajectory=trajectory_out,
             run_time=time.time() - start_time,
-            total_time=trajectory_out[0, Trajectory.TIME],
+            total_time=np.sum(trajectory_out[:, Trajectory.TIME]),
             average_speed=trajectory_out[0, Trajectory.DIST_TO_SF_FWD]
-            / trajectory_out[0, Trajectory.TIME],
+            / np.sum(trajectory_out[:, Trajectory.TIME]),
             max_speed=np.max(trajectory_out[:, Trajectory.SPEED]),
             min_speed=np.min(trajectory_out[:, Trajectory.SPEED]),
             max_lat_acc=np.max(trajectory_out[:, Trajectory.LAT_ACC]),

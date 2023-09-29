@@ -1,6 +1,6 @@
 # spline-trajectory-optimization
 
-**Please head over to `devel` branch for the code in the paper "Spline-Based Minimum-Curvature Trajectory Optimization for Autonomous Racing**
+**Please head over to `devel` branch for the code in the paper "Spline-Based Minimum-Curvature Trajectory Optimization for Autonomous Racing".**
 
 Spline-based Trajectory Optimization tool for Autonomous Racing (Indy Autonomous Challenge)
 

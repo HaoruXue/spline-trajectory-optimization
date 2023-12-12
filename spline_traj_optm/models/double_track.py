@@ -52,24 +52,28 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
 
     # longitudinal tyre force Fx (eq. 4a, 4b)
     # TODO consider differential
-    Fx_f = 0.5 * kd_f * fd + 0.5 * kb_f * fb - 0.5 * fr * m * GRAVITY * ca.cos(bank) * lr / l
+
+    
+    N = m * GRAVITY * ca.cos(bank) + (m * (v **2)/ (1/k)) * ca.sin(bank) #normal force
+
+    Fx_f = 0.5 * kd_f * fd + 0.5 * kb_f * fb - 0.5 * fr * N * lr / l
     Fx_fl = Fx_f
     Fx_fr = Fx_f
     Fx_r = 0.5 * (1 - kd_f) * fd + 0.5 * (1 - kb_f) * \
-        fb - 0.5 * fr * m * ca.cos(bank) * GRAVITY * lf / l
+        fb - 0.5 * fr *  N * lf / l
     Fx_rl = Fx_r
     Fx_rr = Fx_r
 
     # longitudinal acceleration (eq. 9)
-    ax = (fd + fb - 0.5 * cd * A * v ** 2 - fr * m * ca.cos(bank) * GRAVITY) / m
+    ax = (fd + fb - 0.5 * cd * A * v ** 2 - fr * N) / m
 
     # vertical tyre force Fz (eq. 7a, 7b)
-    Fz_f = 0.5 * m * GRAVITY * ca.cos(bank) * lr / \
+    Fz_f = 0.5 * N * lr / \
         (lf + lr) - 0.5 * hcog / (lf + lr) * \
         m * ax + 0.25 * cl_f * rho * A * v ** 2
     Fz_fl = Fz_f - kroll_f * gamma_y
     Fz_fr = Fz_f + kroll_f * gamma_y
-    Fz_r = 0.5 * m * ca.cos(bank) * GRAVITY * lr / \
+    Fz_r = 0.5 * N* lr / \
         (lf + lr) + 0.5 * hcog / (lf + lr) * \
         m * ax + 0.25 * cl_r * rho * A * v ** 2
     Fz_rl = Fz_r - (1 - kroll_f) * gamma_y

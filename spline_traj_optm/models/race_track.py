@@ -22,7 +22,7 @@ class RaceTrack:
 
         self.left_s = BSplineTrajectory(left[:, :2], s, 3, False)
         self.right_s = BSplineTrajectory(right[:, :2], s, 3,False )
-        self.center_s = BSplineTrajectory(centerline[:, :3], s, 3, False)
+        self.center_s = BSplineTrajectory(centerline[:, :3], s, 3, True)
         
 
         self.left_d = self.left_s.sample_along(interval)

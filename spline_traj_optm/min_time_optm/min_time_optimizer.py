@@ -1,4 +1,7 @@
 import casadi as ca
+import matplotlib.pyplot as plt
+import numpy as np
+
 
 from spline_traj_optm.models.trajectory import Trajectory
 import spline_traj_optm.models.dynamic_bicycle as dyn
@@ -123,8 +126,16 @@ def set_up_double_track_problem(params):
         cost_function += ca.sumsqr(U[i, :] - U[i-1, :]) * 1e-1
     opti.minimize(cost_function)
 
+    bank_list = []
+    bank_intp_list = []
     for i in range(N):
-        bank = Bank_Angles[i,:]
+        bank = Bank_Angles[i,:] 
+        bank_list.append(bank)
+        print(bank.shape)
+        print("bank",bank)
+        print("bank intp", race_track.bank_intp(S0[i-1]))
+        print(race_track.bank_intp(S0[i-1]).shape)
+        bank_intp_list.append(race_track.bank_intp(S0[i-1]))
         xi = X[i-1, :] * scale_x + X_OFFSET[i-1, :]
         xip1 = X[i, :] * scale_x + X_OFFSET[i, :]
         ui = U[i-1, :] * scale_u
@@ -140,7 +151,7 @@ def set_up_double_track_problem(params):
         opti.subject_to(opti.bounded(dr + margin, xi[1], dl - margin))
 
         # model constraints
-        dt_dyn.add_constraints(model, opti, xi, ui, ti, xip1, uip1,race_track.bank_intp(S0[i-1]), race_track, race_track.curvature_intp(S0[i-1]))
+        dt_dyn.add_constraints(model, opti, xi, ui, ti, xip1, uip1,bank, race_track, race_track.curvature_intp(S0[i-1]))
 
         # time constraint
         opti.subject_to(0.0 <= ti)
@@ -156,6 +167,20 @@ def set_up_double_track_problem(params):
             opti.set_initial(X[i-1, :] * scale_x, params["x0"][i-1, :] - X_OFFSET[i-1, :])
             opti.set_initial(ui * scale_u, params["u0"][i-1, :])
             opti.set_initial(ti * scale_t, params["t0"][i-1, :])
+
+    
+    plt.figure()
+    plt.plot(np.ravel(bank_list), "-o", label="Bank Angle  List")
+    plt.legend()
+    plt.show()
+
+
+    plt.figure()
+    plt.plot(np.ravel(bank_intp_list), "-o", label="Bank Angle Intp List")
+    plt.legend()
+    plt.show()
+
+
 
     print_lvl = 5 if params["verbose"] else 0
     p_opts = {"expand": True}

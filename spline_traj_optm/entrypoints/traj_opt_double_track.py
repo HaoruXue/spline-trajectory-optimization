@@ -25,7 +25,7 @@ def main():
         "Test track",
         get_trajectory_array(params["left_boundary"]),
         get_trajectory_array(params["right_boundary"]),
-        get_trajectory_array(params["centerline"]),
+        get_trajectory_array_with_bank(params["centerline"]),
         s=1.0,
         interval=interval
     )
@@ -47,7 +47,7 @@ def main():
                         estimates["max_jerk_mpsc"])
         v = Vehicle(vp)
         sim = Simulator(v)
-        traj_d[:, Trajectory.SPEED] = 40
+        traj_d[:, Trajectory.SPEED] = 77
         traj_d[:, Trajectory.TIME] = .01
 
         # result = sim.run_simulation(traj_d, False)
@@ -100,6 +100,16 @@ def main():
     plt.show()
 
     plt.figure()
+    plt.plot(opt_traj_d[:, Trajectory.BANK], "-o", label="Bank Angle")
+    plt.legend()
+    plt.show()
+
+    plt.figure()
+    plt.plot(opt_traj_d[:, Trajectory.YAW], "-o", label="Yaw")
+    plt.legend()
+    plt.show()
+
+    plt.figure()
     plt.plot(opt_traj_d[:, Trajectory.YAW], "-o", label="Yaw")
     plt.legend()
     plt.show()
@@ -133,6 +143,8 @@ def main():
     plt.plot(u[:, 3], label="Load Transfer")
     plt.legend()
     plt.show()
+
+    
 
 if __name__ == "__main__":
     main()

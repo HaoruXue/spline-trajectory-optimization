@@ -13,6 +13,15 @@ def get_trajectory_array(traj_resource):
     else:
         with as_file(traj_file) as f:
             return np.loadtxt(f, dtype=np.float64, delimiter=',',skiprows=1, usecols=(0, 1))
+        
+    
+def get_trajectory_array_with_bank(traj_resource):
+    traj_file = traj_resource
+    if type(traj_file) is str:
+        return np.loadtxt(traj_file, dtype=np.float64, delimiter=',',skiprows=1, usecols=(0, 1,3))
+    else:
+        with as_file(traj_file) as f:
+            return np.loadtxt(f, dtype=np.float64, delimiter=',',skiprows=1, usecols=(0, 1,3))
 
 def get_bspline(traj_resource, s=0.8):
     traj_arr = get_trajectory_array(traj_resource)

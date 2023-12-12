@@ -104,11 +104,13 @@ class Simulator:
 
         # Start by identifying where the turns are
         turns = np.array(find_turns())
+        print("turns,", turns)
         # iteration_flags is num_turns * 5 where each column means:
         # the turn entry index, the turn index, the turn exit index,
         # if the turn entry iteration is stopped, and
         # if the turn exit iteration is stopped
         iteration_flags = np.repeat(turns[:, np.newaxis], 5, axis=1)
+        print(iteration_flags)
         iteration_flags[:, 3:] = 0
 
         def calc_distance(pt1, pt2):
@@ -363,8 +365,10 @@ class Simulator:
                 if len(iteration_flags) == 0:
                     break
                 itr += 1
+                print(itr)
 
         iterate(iteration_flags)
+       
 
         # Populate the time and distance fields
         trajectory_out.fill_time()

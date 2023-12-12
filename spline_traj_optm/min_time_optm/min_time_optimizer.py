@@ -71,7 +71,7 @@ def set_up_bicycle_problem(params):
         acc = ca.power(lat_acc, 2) + ca.power(lon_acc, 2)
         opti.subject_to(acc <= model["acc_max"] ** 2)
 
-        # initial condition
+        # initial conditiondyn
         opti.set_initial(xi, ca.DM([0.0, 0.0, Yaws[i-1], 0.0, 1.0]))
         opti.set_initial(ui, 0.0)
         opti.set_initial(ti, 1.0)
@@ -108,6 +108,7 @@ def set_up_double_track_problem(params):
     # Yaws = ca.DM(traj_d[:, Trajectory.YAW])
     Velocities = ca.DM(traj_d[:, Trajectory.SPEED])
     Times = ca.DM(traj_d[:, Trajectory.TIME])
+    Bank_Angles = ca.DM(traj_d[:, Trajectory.BANK])
     BoundL = race_track.left_intp(S0)
     BoundR = race_track.right_intp(S0)
     scale_x = ca.DM([1.0, params["average_track_width"], 1.0, 1.0, 0.5, params["speed_cap"]]).T
@@ -123,6 +124,7 @@ def set_up_double_track_problem(params):
     opti.minimize(cost_function)
 
     for i in range(N):
+        bank = Bank_Angles[i,:]
         xi = X[i-1, :] * scale_x + X_OFFSET[i-1, :]
         xip1 = X[i, :] * scale_x + X_OFFSET[i, :]
         ui = U[i-1, :] * scale_u
@@ -138,7 +140,7 @@ def set_up_double_track_problem(params):
         opti.subject_to(opti.bounded(dr + margin, xi[1], dl - margin))
 
         # model constraints
-        dt_dyn.add_constraints(model, opti, xi, ui, ti, xip1, uip1, race_track, race_track.curvature_intp(S0[i-1]))
+        dt_dyn.add_constraints(model, opti, xi, ui, ti, xip1, uip1,race_track.bank_intp(S0[i-1]), race_track, race_track.curvature_intp(S0[i-1]))
 
         # time constraint
         opti.subject_to(0.0 <= ti)

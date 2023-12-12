@@ -20,9 +20,10 @@ class RaceTrack:
         assert left.shape[0] >= 3 and right.shape[0] >= 3
         assert left.shape[1] >= 2 and right.shape[1] >= 2
 
-        self.left_s = BSplineTrajectory(left[:, :2], s, 3)
-        self.right_s = BSplineTrajectory(right[:, :2], s, 3)
-        self.center_s = BSplineTrajectory(centerline[:, :2], s, 3)
+        self.left_s = BSplineTrajectory(left[:, :2], s, 3, False)
+        self.right_s = BSplineTrajectory(right[:, :2], s, 3,False )
+        self.center_s = BSplineTrajectory(centerline[:, :3], s, 3, False)
+        
 
         self.left_d = self.left_s.sample_along(interval)
         self.right_d = self.right_s.sample_along(interval)
@@ -35,6 +36,9 @@ class RaceTrack:
         self.name = name
 
         self.fill_trajectory_boundaries(self.center_d)
+
+        #add bank angle
+
 
         # create interpolants
         interpolants = self.center_d.copy()
@@ -60,6 +64,9 @@ class RaceTrack:
         x_intp = ca.interpolant("x_intp_impl", "bspline", [abscissa], interpolants[:, Trajectory.X].tolist())
         y_intp = ca.interpolant("y_intp_impl", "bspline", [abscissa], interpolants[:, Trajectory.Y].tolist())
 
+        bank_intp = ca.interpolant("bank_intp_impl", "bspline", [abscissa], interpolants[:, Trajectory.BANK].tolist())
+
+
         # build the interpolation functions
         s = ca.MX.sym("s", 1, 1)
         s_mod = ca.fmod(s, self.center_s.get_length())
@@ -78,6 +85,8 @@ class RaceTrack:
         self.right_intp = ca.Function("right_intp", [s], [right_intp(s_mod)])
         self.x_intp = ca.Function("x_intp", [s], [x_intp(s_mod)])
         self.y_intp = ca.Function("y_intp", [s], [y_intp(s_mod)])
+        self.bank_intp = ca.Function("bank_intp", [s], [bank_intp(s_mod)])
+
 
         # build fast interpolations
         curvatures = self.curvature_intp(abscissa)

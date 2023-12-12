@@ -210,17 +210,31 @@ class Trajectory:
 
 
 class BSplineTrajectory:
-    def __init__(self, coordinates: np.ndarray, s: float, k: int):
-        assert coordinates.shape[0] >= 3 and coordinates.shape[1] == 2 and len(
-            coordinates.shape) == 2, "coordinates should be N * 2"
-        # close the loop
-        coordinates_close_loop = np.vstack(
-            [coordinates, coordinates[0, np.newaxis, :]])
-        tck, u = interpolate.splprep(
-            [coordinates_close_loop[:, 0], coordinates_close_loop[:, 1]], s=s, per=True, k=k)
-        self._spl_x = BSpline(tck[0], tck[1][0], tck[2])
-        self._spl_y = BSpline(tck[0], tck[1][1], tck[2])
-        self._length = self.__get_section_length(0.0, 1.0)
+    def __init__(self, coordinates: np.ndarray, s: float, k: int, bank_angles = False):
+        self.has_bank = bank_angles
+        if not self.has_bank:
+            assert coordinates.shape[0] >= 3 and coordinates.shape[1] == 2 and len(
+                coordinates.shape) == 2, "coordinates should be N * 2"
+            # close the loop
+            coordinates_close_loop = np.vstack(
+                [coordinates, coordinates[0, np.newaxis, :]])
+            tck, u = interpolate.splprep(
+                [coordinates_close_loop[:, 0], coordinates_close_loop[:, 1]], s=s, per=True, k=k)
+            self._spl_x = BSpline(tck[0], tck[1][0], tck[2])
+            self._spl_y = BSpline(tck[0], tck[1][1], tck[2])
+            self._length = self.__get_section_length(0.0, 1.0)
+        else:
+            assert coordinates.shape[0] >= 3 and coordinates.shape[1] == 3 and len(
+                coordinates.shape) == 2, "coordinates should be N * 3 with Bank"
+            # close the loop
+            coordinates_close_loop = np.vstack(
+                [coordinates, coordinates[0, np.newaxis, :]])
+            tck, u = interpolate.splprep(
+                [coordinates_close_loop[:, 0], coordinates_close_loop[:, 1], coordinates_close_loop[:, 2]], s=s, per=True, k=k)
+            self._spl_x = BSpline(tck[0], tck[1][0], tck[2])
+            self._spl_y = BSpline(tck[0], tck[1][1], tck[2])
+            self._spl_bank = BSpline(tck[0], tck[1][2], tck[2])
+            self._length = self.__get_section_length(0.0, 1.0)
 
     def __integrate_length(self, t: float):
         return np.sqrt(interpolate.splev(t, self._spl_x, der=1) ** 2 + interpolate.splev(t, self._spl_y, der=1) ** 2)
@@ -277,6 +291,9 @@ class BSplineTrajectory:
 
         traj[:, Trajectory.X] = interpolate.splev(ts, self._spl_x)
         traj[:, Trajectory.Y] = interpolate.splev(ts, self._spl_y)
+        if self.has_bank:
+            traj[:, Trajectory.BANK] = interpolate.splev(ts, self._spl_bank)
+
         traj[:, Trajectory.YAW] = self.__get_yaw(ts)
         traj[:, Trajectory.CURVATURE] = self.__get_turn_radius(ts)
 

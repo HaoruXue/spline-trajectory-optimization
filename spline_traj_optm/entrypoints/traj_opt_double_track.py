@@ -5,7 +5,7 @@ import casadi as ca
 import os
 import yaml
 
-from spline_traj_optm.tests.test_trajectory import get_bspline, get_trajectory_array
+from spline_traj_optm.tests.test_trajectory import get_bspline, get_trajectory_array, get_trajectory_array_with_bank
 from spline_traj_optm.models.trajectory import Trajectory, save_ttl
 import spline_traj_optm.models.double_track as dt_dyn
 from spline_traj_optm.models.race_track import RaceTrack
@@ -14,7 +14,7 @@ from spline_traj_optm.models.vehicle import VehicleParams, Vehicle
 from spline_traj_optm.simulator.simulator import Simulator
 
 def main():
-    param_file = "traj_opt_double_track.yaml"
+    param_file = 'traj_opt_double_track.yaml'
     if not os.path.exists(param_file):
         raise FileNotFoundError(f"{param_file} does not exist.")
     with open(param_file, "r") as f:
@@ -32,6 +32,8 @@ def main():
     traj_d = race_track.center_d.copy()
     race_track.fill_trajectory_boundaries(traj_d)
 
+    
+
     if ("x0" not in params):
         estimates = params["estimates"]
         acc_speed_lookup = np.array(estimates["acc_speed_loopup"])
@@ -45,8 +47,11 @@ def main():
                         estimates["max_jerk_mpsc"])
         v = Vehicle(vp)
         sim = Simulator(v)
-        result = sim.run_simulation(traj_d, False)
-        traj_d = result.trajectory
+        traj_d[:, Trajectory.SPEED] = 40
+        traj_d[:, Trajectory.TIME] = .01
+
+        # result = sim.run_simulation(traj_d, False)
+        # traj_d = result.trajectory
     else:
         params["x0"] = ca.DM.from_file(params["x0"], "txt")
         params["u0"] = ca.DM.from_file(params["u0"], "txt")
@@ -63,10 +68,10 @@ def main():
     except Exception as e:
         print(e)
 
-    x = opti.debug.value(X) * scale_x + np.hstack(
+    x = np.array(opti.debug.value(X)) * np.array(scale_x) + np.hstack(
         [race_track.abscissa[:, np.newaxis], np.zeros((len(traj_d), 5))])
-    u = opti.debug.value(U) * scale_u
-    t = opti.debug.value(T) * scale_t
+    u = np.array(opti.debug.value(U)) * np.array(scale_u)
+    t = np.array(opti.debug.value(T)) * np.array(scale_t)
 
     print(f"[Optimal lap time: {ca.sum1(t) * scale_t}]")
 

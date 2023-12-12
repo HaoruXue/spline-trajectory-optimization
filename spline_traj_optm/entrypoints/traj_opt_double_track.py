@@ -46,7 +46,7 @@ def main():
                         estimates["max_speed_mps"],
                         estimates["max_jerk_mpsc"])
         v = Vehicle(vp)
-        traj_d[:, Trajectory.SPEED] = 77
+        traj_d[:, Trajectory.SPEED] = 45
         traj_d[:, Trajectory.TIME] = .01
 
         # result = sim.run_simulation(traj_d, False)

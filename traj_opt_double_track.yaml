@@ -43,15 +43,15 @@ estimates: # some initial estimates to warm start the solving
 model:
   kd_f: 0.0 # front drive force bias (rear is 1 - kd_f)
   kb_f: 0.55 # front brake force bias (rear is 1 - kb_f)
-  mass: 800.0 # mass of car (kg)
+  mass: 747.52 # mass of car (kg)
   Jzz: 700.0 # MOI around z axis (kg * m^2)
-  lf: 1.63449 # cg to front axle (m)
-  lr: 1.33731 # cg to rear axle (m)
+  lf: 1.7203 # cg to front axle (m)
+  lr: 1.2514 # cg to rear axle (m)
   twf: 1.6 # front track width (m)
   twr: 1.6 # rear track width (m)
   delta_max: 0.314159 # max front wheel angle (rad)
   vehicle_width: 1.6 # physical vehicle width (m)
-  safety_margin: 1.0 # safety margin added to vehicle width (m)
+  safety_margin: 2.5 # safety margin added to vehicle width (m)
 
   fr: 0.012 # rolling resistance coefficient
   hcog: 0.35 # center of gravity height

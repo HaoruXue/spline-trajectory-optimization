@@ -54,7 +54,7 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
     # TODO consider differential
 
     
-    N = m * GRAVITY * ca.cos(bank) + (m * (v **2)/ (1/k)) * abs(ca.sin(bank)) #normal force
+    N = m * GRAVITY * ca.cos(bank) + (m * (v **2) * (k)) * abs(ca.sin(bank)) #normal force
 
     Fx_f = 0.5 * kd_f * fd + 0.5 * kb_f * fb - 0.5 * fr * N * lr / l
     Fx_fl = Fx_f
@@ -105,9 +105,10 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
     Fy_rl = mu * Fz_rl * ca.sin(Cr * ca.arctan(Br * a_rl))
     Fy_rr = mu * Fz_rr * ca.sin(Cr * ca.arctan(Br * a_rr))
 
+     
     # dynamics (eq. 3a, 3b, 3c)
     v_dot = 1 / m * ((Fx_rl + Fx_rr) * ca.cos(beta) + (Fx_fl + Fx_fr) * ca.cos(delta - beta)
-                     + (Fy_rl + Fy_rr + m * GRAVITY * abs(ca.sin(bank))) * ca.sin(beta) -
+                     + (Fy_rl + Fy_rr - m * GRAVITY * (ca.sin(bank))) * ca.sin(beta) -
                      (Fy_fl + Fy_fr) * ca.sin(delta - beta)
                      - 0.5 * cd * rho * A * v ** 2 * ca.cos(beta))
     beta_dot = -omega + 1 / (m * v) * (-(Fx_rl + Fx_rr) * ca.sin(beta) + (Fx_fl + Fx_fr) * ca.sin(delta - beta)

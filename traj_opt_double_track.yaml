@@ -51,7 +51,9 @@ model:
   twr: 1.6 # rear track width (m)
   delta_max: 0.314159 # max front wheel angle (rad)
   vehicle_width: 1.6 # physical vehicle width (m)
-  safety_margin: 2.5 # safety margin added to vehicle width (m)
+  safety_margin_r: 4.5 # safety margin added to vehicle width (m)
+  safety_margin_l: 1.5 # safety margin added to vehicle width (m)
+
 
   fr: 0.012 # rolling resistance coefficient
   hcog: 0.35 # center of gravity height

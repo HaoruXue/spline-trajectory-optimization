@@ -146,9 +146,11 @@ def set_up_double_track_problem(params):
         opti.subject_to(xi[0] == X_OFFSET[i-1, 0])
         dr = BoundR[i-1]
         dl = BoundL[i-1]
-        margin = model["vehicle_width"] / 2.0 + model["safety_margin"]
-        assert dr + margin < dl - margin, f"Track width must be wider than vehicle width plus 2 * safety margin at point {i}."
-        opti.subject_to(opti.bounded(dr + margin, xi[1], dl - margin))
+        marginR = model["vehicle_width"] / 2.0 + model["safety_margin_r"]
+        marginL = model["vehicle_width"] / 2.0 + model["safety_margin_l"]
+
+        assert dr + marginR < dl - marginR, f"Track width must be wider than vehicle width plus 2 * safety margin at point {i}."
+        opti.subject_to(opti.bounded(dr + marginR, xi[1], dl - marginL))
 
         # model constraints
         dt_dyn.add_constraints(model, opti, xi, ui, ti, xip1, uip1,bank, race_track, race_track.curvature_intp(S0[i-1]))

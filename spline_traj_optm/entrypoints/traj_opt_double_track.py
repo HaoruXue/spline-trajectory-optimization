@@ -119,6 +119,12 @@ def main():
     plt.show()
 
     plt.figure()
+    plt.plot(x[:, 5] * ca.sin(x[:,4]), label="Lateral Velocity")
+    plt.legend()
+    plt.show()
+
+
+    plt.figure()
     plt.plot(t, label="Time")
     plt.legend()
     plt.show()

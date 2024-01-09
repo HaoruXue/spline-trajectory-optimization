@@ -21,11 +21,18 @@ def main():
         params = yaml.safe_load(f)
     
     interval = params["interval"]
+    is_bank = params["is_bank"]
+    lb = get_trajectory_array(params["left_boundary"])
+    rb = get_trajectory_array(params["right_boundary"])
+    if is_bank:
+        cl = get_trajectory_array_with_bank(params["centerline"])
+    else:
+        cl = get_trajectory_array(params["centerline"])
     race_track = RaceTrack(
         "Test track",
-        get_trajectory_array(params["left_boundary"]),
-        get_trajectory_array(params["right_boundary"]),
-        get_trajectory_array_with_bank(params["centerline"]),
+        lb,
+        rb,
+        cl,
         s=1.0,
         interval=interval
     )

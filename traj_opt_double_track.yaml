@@ -23,6 +23,7 @@ tol: 0.00001 # convergence tolerance of IPOPT
 constr_viol_tol: 0.1 # constraint violation tolerance of IPOPT
 speed_cap: 80.0 # overall speed limit (m/s)
 average_track_width: 15 # a resonable track width (m) assumption to scale the NLP nicely
+is_bank: false #does the input csv have a bank
 
 estimates: # some initial estimates to warm start the solving
   acc_speed_loopup: # Lookup of acceleration ability at different speed levels. Left is the speed (m/s) and right is the acceleration (m/s^2)

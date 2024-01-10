@@ -8,20 +8,30 @@ import spline_traj_optm.examples.race_track.monza
 
 def get_trajectory_array(traj_resource):
     traj_file = traj_resource
-    if type(traj_file) is str:
-        return np.loadtxt(traj_file, dtype=np.float64, delimiter=',',skiprows=1, usecols=(0, 1))
+
+    def count_columns(file):
+        with open(file, 'r') as f:
+            f.readline()  
+            second_line = f.readline()
+            return len(second_line.split(','))
+
+    if isinstance(traj_file, str):
+        num_columns = count_columns(traj_file)
+        print(num_columns)
     else:
         with as_file(traj_file) as f:
-            return np.loadtxt(f, dtype=np.float64, delimiter=',',skiprows=1, usecols=(0, 1))
-        
-    
-def get_trajectory_array_with_bank(traj_resource):
-    traj_file = traj_resource
-    if type(traj_file) is str:
-        return np.loadtxt(traj_file, dtype=np.float64, delimiter=',',skiprows=1, usecols=(0, 1,3))
+            num_columns = count_columns(f)
+
+    cols_to_use = (0, 1, 3) if num_columns >= 4 else (0, 1)
+
+
+    print(cols_to_use)
+    if isinstance(traj_file, str):
+        return np.loadtxt(traj_file, dtype=np.float64, delimiter=',', skiprows=1, usecols=cols_to_use)
     else:
         with as_file(traj_file) as f:
-            return np.loadtxt(f, dtype=np.float64, delimiter=',',skiprows=1, usecols=(0, 1,3))
+            return np.loadtxt(f, dtype=np.float64, delimiter=',', skiprows=1, usecols=cols_to_use)
+
 
 def get_bspline(traj_resource, s=0.8):
     traj_arr = get_trajectory_array(traj_resource)

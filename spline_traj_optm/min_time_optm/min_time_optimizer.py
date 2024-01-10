@@ -149,7 +149,7 @@ def set_up_double_track_problem(params):
         marginR = model["vehicle_width"] / 2.0 + model["safety_margin_r"]
         marginL = model["vehicle_width"] / 2.0 + model["safety_margin_l"]
 
-        assert dr + marginR < dl - marginR, f"Track width must be wider than vehicle width plus 2 * safety margin at point {i}."
+        assert dr + marginR < dl - marginL, f"Track width must be wider than vehicle width plus 2 * safety margin at point {i}."
         opti.subject_to(opti.bounded(dr + marginR, xi[1], dl - marginL))
 
         # model constraints

@@ -210,7 +210,7 @@ class Trajectory:
 
 
 class BSplineTrajectory:
-    def __init__(self, coordinates: np.ndarray, s: float, k: int, bank_angles = False):
+    def __init__(self, coordinates: np.ndarray, s: float, k: int, bank_angles):
         self.has_bank = bank_angles
         if not self.has_bank:
             assert coordinates.shape[0] >= 3 and coordinates.shape[1] == 2 and len(

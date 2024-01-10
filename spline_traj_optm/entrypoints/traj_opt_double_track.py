@@ -5,7 +5,7 @@ import casadi as ca
 import os
 import yaml
 
-from spline_traj_optm.tests.test_trajectory import get_bspline, get_trajectory_array, get_trajectory_array_with_bank
+from spline_traj_optm.tests.test_trajectory import get_bspline, get_trajectory_array
 from spline_traj_optm.models.trajectory import Trajectory, save_ttl
 import spline_traj_optm.models.double_track as dt_dyn
 from spline_traj_optm.models.race_track import RaceTrack
@@ -21,13 +21,9 @@ def main():
         params = yaml.safe_load(f)
     
     interval = params["interval"]
-    is_bank = params["is_bank"]
     lb = get_trajectory_array(params["left_boundary"])
     rb = get_trajectory_array(params["right_boundary"])
-    if is_bank:
-        cl = get_trajectory_array_with_bank(params["centerline"])
-    else:
-        cl = get_trajectory_array(params["centerline"])
+    cl = get_trajectory_array(params["centerline"])
     race_track = RaceTrack(
         "Test track",
         lb,

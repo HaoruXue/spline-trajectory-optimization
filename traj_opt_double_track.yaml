@@ -7,10 +7,10 @@ left_boundary: LVMS_MAIN_INNER_BOUND_enu.csv
 right_boundary: LVMS_MAIN_OUTTER_BOUND_enu.csv
 output: LVMS_A_OPTM_1_0.csv
 
-# centerline: MGKT_CENTER_enu.csv
+# centerline: MONZA_UNOPTIMIZED_LINE_enu.csv
 # # centerline: /home/haoru/art/ttl-ws/PUTNAM/enu/PUTNAM_A_CENTER_enu.csv
-# left_boundary: MGKT_IN_BOUND_enu.csv
-# right_boundary: MGKT_OUT_BOUND_enu.csv
+# left_boundary: MONZA_LEFT_BOUNDARY_enu.csv
+# right_boundary: MONZA_RIGHT_BOUNDARY_enu.csv
 # output: MGKT_A_OPTM_1_0.csv
 
 
@@ -23,7 +23,6 @@ tol: 0.00001 # convergence tolerance of IPOPT
 constr_viol_tol: 0.1 # constraint violation tolerance of IPOPT
 speed_cap: 80.0 # overall speed limit (m/s)
 average_track_width: 15 # a resonable track width (m) assumption to scale the NLP nicely
-is_bank: false #does the input csv have a bank
 
 estimates: # some initial estimates to warm start the solving
   acc_speed_loopup: # Lookup of acceleration ability at different speed levels. Left is the speed (m/s) and right is the acceleration (m/s^2)

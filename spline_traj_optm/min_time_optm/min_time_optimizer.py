@@ -131,10 +131,10 @@ def set_up_double_track_problem(params):
     for i in range(N):
         bank = Bank_Angles[i,:] 
         bank_list.append(bank)
-        print(bank.shape)
-        print("bank",bank)
-        print("bank intp", race_track.bank_intp(S0[i-1]))
-        print(race_track.bank_intp(S0[i-1]).shape)
+        # print(bank.shape)
+        # print("bank",bank)
+        # print("bank intp", race_track.bank_intp(S0[i-1]))
+        # print(race_track.bank_intp(S0[i-1]).shape)
         bank_intp_list.append(race_track.bank_intp(S0[i-1]))
         xi = X[i-1, :] * scale_x + X_OFFSET[i-1, :]
         xip1 = X[i, :] * scale_x + X_OFFSET[i, :]
@@ -177,10 +177,10 @@ def set_up_double_track_problem(params):
     plt.show()
 
 
-    plt.figure()
-    plt.plot(np.ravel(bank_intp_list), "-o", label="Bank Angle Intp List")
-    plt.legend()
-    plt.show()
+    # plt.figure()
+    # plt.plot(np.ravel(bank_intp_list), "-o", label="Bank Angle Intp List")
+    # plt.legend()
+    # plt.show()
 
 
 

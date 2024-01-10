@@ -54,7 +54,7 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
     # TODO consider differential
 
     
-    N = m * GRAVITY * ca.cos(bank) + (m * (v **2) * (k)) * abs(ca.sin(bank)) #normal force
+    N = m * GRAVITY * ca.cos(bank) - (m * (v **2) * (k)) * (ca.sin(bank)) #normal force
 
     Fx_f = 0.5 * kd_f * fd + 0.5 * kb_f * fb - 0.5 * fr * N * lr / l
     Fx_fl = Fx_f

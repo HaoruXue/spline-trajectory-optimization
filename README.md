@@ -24,3 +24,14 @@ Spline-based Trajectory Optimization tool for Autonomous Racing (Indy Autonomous
 - `spline_traj_optm/tests`: Tests for the package
 - `spline_traj_optm/visualization`: Functions for visualization the optimization and simulation results
 - `julia/spline_traj_opt.ipynb`: Julia notebook of the optimization notebook
+
+## Input Format
+
+csvs for inside bound , outside bound, and center line
+- 3 columns
+
+![image](https://github.com/HaoruXue/spline-trajectory-optimization/assets/32603181/f88bc388-4f4a-4837-9324-ef53f03b6f84)
+
+If there is a bank angle, should be 4 columns with the fourth column as bank angle (if 3 columns bank default to zero)
+![image](https://github.com/HaoruXue/spline-trajectory-optimization/assets/32603181/39b34fe9-7436-417e-8409-f67922fb796c)
+

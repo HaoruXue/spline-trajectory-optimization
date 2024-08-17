@@ -8,8 +8,8 @@ from scipy.interpolate import splprep, splev, interp1d
 def load_csv_file(file_path):
     data = pd.read_csv(file_path)
     x_csv = data.iloc[:, 0].values
-    y_csv = data.iloc[:, 1].values
-    z_csv = data.iloc[:, 2].values
+    y_csv = data.iloc[:, 2].values
+    z_csv = data.iloc[:, 1].values
     return x_csv, y_csv, z_csv
 
 # Find the closest point in `inside` to each point in `outside`
@@ -107,9 +107,9 @@ def plot_final_results(center_x, center_y, bank_angles):
     plt.show()
 
 # File paths (replace with your actual file paths)
-in_file_path = 'KY_MAIN_INNER_enu.csv'
-out_file_path = 'KY_MAIN_OUTER_enu.csv'
-result_file_path = 'centerline_with_bank_angles.csv'
+in_file_path = 'IMS INNER LINE_smoothed.csv'
+out_file_path = 'IMS OUTER WALL_smoothed.csv'
+result_file_path = 'IMS_centerline_with_bank_angles.csv'
 
 # Load the data
 x_in, y_in, z_in = load_csv_file(in_file_path)

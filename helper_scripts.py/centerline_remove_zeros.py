@@ -35,7 +35,7 @@ def main(input_file_path, output_file_path):
 
 # Example usage
 if __name__ == "__main__":
-    input_file_path = "curve_multiagent_center.csv"  # Replace with your input file path
-    output_file_path = "curve_multiagent_center.csv"  # Replace with your desired output file path
+    input_file_path = "CURVE_OUTSIDE_WALL.csv"  # Replace with your input file path
+    output_file_path = "CURVE_OUTSIDE_WALL.csv"  # Replace with your desired output file path
     
     main(input_file_path, output_file_path)

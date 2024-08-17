@@ -147,9 +147,9 @@ def plot_bank_angle_at_xy(center_x, center_y, bank_angle):
     plt.show()
 
 # File paths (replace with your actual file paths)
-in_file_path = 'KY_MAIN_INNER_enu.csv'
-out_file_path = 'KY_MAIN_OUTER_enu.csv'
-centerline_file_path = 'centerline_kentucky_bank_enu.csv'
+in_file_path = 'IMS_INNER_LINE.csv'
+out_file_path = 'centerline_IMS_bank_enu.csv'
+centerline_file_path = 'IMS_lower_half_line.csv'
 
 # Load the data
 x_in, y_in, z_in = load_csv_file(in_file_path)

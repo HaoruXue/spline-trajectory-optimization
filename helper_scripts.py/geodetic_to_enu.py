@@ -15,13 +15,13 @@ def filter_outliers(data, threshold):
     filtered_data.append(data[-1])
     return filtered_data
 
-input_file = 'curve_multiagent_center.csv'
-output_file = 'curve_multiagent_center.csv'
-origin_lat = 38.71250474
-origin_lon = -84.91847019
+input_file = 'CURVE_OUTSIDE_WALL.csv'
+output_file = 'CURVE_OUTSIDE_WALL_ENU.csv'
+origin_lat = 36.27207268554108
+origin_lon = -115.0108130553903
 origin_alt = 0.0
 ignore_line = 1
-distance_threshold = 100.0  # Adjust the threshold value as needed
+distance_threshold = 1000.0  # Adjust the threshold value as needed
 
 input_data = []
 output_data = []

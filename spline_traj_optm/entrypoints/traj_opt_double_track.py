@@ -71,7 +71,7 @@ def main():
         print(e)
 
     x = np.array(opti.debug.value(X)) * np.array(scale_x) + np.hstack(
-        [race_track.abscissa[:, np.newaxis], np.zeros((len(traj_d), 5))])
+        [race_track.abscissa[:, np.newaxis], np.zeros((len(traj_d), 6))])
     u = np.array(opti.debug.value(U)) * np.array(scale_u)
     t = np.array(opti.debug.value(T)) * np.array(scale_t)
 
@@ -166,10 +166,16 @@ def main():
     plt.show()
 
     plt.figure()
-    plt.plot(u[:, 2], label="Steering Angle")
+    plt.plot(u[:, 2], label="Steering Cmd")
     plt.legend()
     plt.show()
 
+
+    plt.figure()
+    plt.plot(x[:, 6], label="Steering Angle")
+    plt.legend()
+    plt.show()
+    
     plt.figure()
     plt.plot(u[:, 3], label="Load Transfer")
     plt.legend()

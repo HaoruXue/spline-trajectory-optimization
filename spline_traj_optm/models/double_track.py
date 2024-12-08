@@ -14,6 +14,7 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
     omega = x[3]  # yaw rate
     beta = x[4]  # slip angle
     v = x[5]  # velocity magnitude
+    steer = x[6] #steer_angle
     fd = u[0] * (ca.tanh(u[0]) * 0.5 + 0.5)  # drive force
     fb = u[0] * (ca.tanh(-u[0]) * 0.5 + 0.5)  # brake force
     delta = u[2]  # front wheel angle
@@ -51,6 +52,8 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
     Er = model_dict["Er"]  # magic formula E - rear
     Fz0_r = model_dict["Fz0_r"]  # magic formula Fz0 - rear
     eps_r = model_dict["eps_r"]  # extended magic formula epsilon - rear
+    
+    Ts = model_dict["Ts"]  #the response of the actuator model
 
     # longitudinal tyre force Fx (eq. 4a, 4b)
     # TODO consider differential
@@ -87,10 +90,10 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
     # a_fr = delta - ca.arctan((lf * omega + v * ca.sin(beta)) /
     #                          (v * ca.cos(beta) + 0.5 * twf * omega))
     
-    a_fl = -ca.atan2((vy + lf * omega) * ca.cos(delta) - vx * ca.sin(delta),
-                    vx * ca.cos(delta) + (vy + lf * omega) * ca.sin(beta) - 0.5 * twf * omega)
-    a_fr = -ca.atan2((vy + lf * omega) * ca.cos(delta) - vx * ca.sin(delta),
-                    vx * ca.cos(delta) + (vy + lf * omega) * ca.sin(beta) + 0.5 * twf * omega)
+    a_fl = -ca.atan2((vy + lf * omega) * ca.cos(steer) - vx * ca.sin(steer),
+                    vx * ca.cos(steer) + (vy + lf * omega) * ca.sin(beta) - 0.5 * twf * omega)
+    a_fr = -ca.atan2((vy + lf * omega) * ca.cos(steer) - vx * ca.sin(steer),
+                    vx * ca.cos(steer) + (vy + lf * omega) * ca.sin(beta) + 0.5 * twf * omega)
 
     a_rl = ca.atan2((lr * omega - v * ca.sin(beta)),
                      (v * ca.cos(beta) - 0.5 * twr * omega))
@@ -115,18 +118,18 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
 
      
     # dynamics (eq. 3a, 3b, 3c)
-    v_dot = 1 / m * ((Fx_rl + Fx_rr) * ca.cos(beta) + (Fx_fl + Fx_fr) * ca.cos(delta - beta)
+    v_dot = 1 / m * ((Fx_rl + Fx_rr) * ca.cos(beta) + (Fx_fl + Fx_fr) * ca.cos(steer - beta)
                      + (Fy_rl + Fy_rr - m * GRAVITY * (ca.sin(bank))) * ca.sin(beta) -
-                     (Fy_fl + Fy_fr) * ca.sin(delta - beta)
+                     (Fy_fl + Fy_fr) * ca.sin(steer - beta)
                      - 0.5 * cd * rho * A * v ** 2 * ca.cos(beta))
-    beta_dot = -omega + 1 / (m * v) * (-(Fx_rl + Fx_rr) * ca.sin(beta) + (Fx_fl + Fx_fr) * ca.sin(delta - beta)
+    beta_dot = -omega + 1 / (m * v) * (-(Fx_rl + Fx_rr) * ca.sin(beta) + (Fx_fl + Fx_fr) * ca.sin(steer - beta)
                                        + (Fy_rl + Fy_rr) * ca.cos(beta) +
-                                       (Fy_fl + Fy_fr) * ca.cos(delta - beta)
+                                       (Fy_fl + Fy_fr) * ca.cos(steer - beta)
                                        + 0.5 * cd * rho * A * v ** 2 * ca.sin(beta))
     omega_dot = 1 / Jzz * ((Fx_rr - Fx_rl) * twr / 2 - (Fy_rl + Fy_rr) * lr
-                           + ((Fx_fr - Fx_fl) * ca.cos(delta) +
-                              (Fy_fl - Fy_fr) * ca.sin(delta)) * twf / 2
-                           + ((Fy_fl + Fy_fr) * ca.cos(delta) + (Fx_fl + Fx_fr) * ca.sin(delta)) * lf)
+                           + ((Fx_fr - Fx_fl) * ca.cos(steer) +
+                              (Fy_fl - Fy_fr) * ca.sin(steer)) * twf / 2
+                           + ((Fy_fl + Fy_fr) * ca.cos(steer) + (Fx_fl + Fx_fr) * ca.sin(steer)) * lf)
 
     # cg position
     x_dot = v * ca.cos(phi + beta)
@@ -135,8 +138,10 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
     if race_track is not None:
         x_dot /= (1 - py * k)
         phi_dot -= k * x_dot
+        
+    d_steer = (1/Ts) *(delta-steer)
 
-    X_dot = ca.vertcat(x_dot, y_dot, phi_dot, omega_dot, beta_dot, v_dot)
+    X_dot = ca.vertcat(x_dot, y_dot, phi_dot, omega_dot, beta_dot, v_dot, d_steer)
 
     Fxij = (Fx_fl, Fx_fr, Fx_rl, Fx_rr)
     Fyij = (Fy_fl, Fy_fr, Fy_rl, Fy_rr)
@@ -146,7 +151,7 @@ def dynamics(model_dict, x, u,bank, race_track=None, k=None):
 
 
 def nx():
-    return 6
+    return 7
 
 
 def nu():
@@ -184,7 +189,7 @@ def add_constraints(model_dict, opti, x, u, t, xip1, uip1,bank, race_track=None,
     if race_track is not None:
         temp[0, 0] = utils.align_abscissa(temp[0, 0], x[0, 0], race_track.center_s.get_length())
     f1, tyres = dynamics(model_dict, x, u,bank, race_track, k)
-    f2, _ = dynamics(model_dict, temp, u,bank, race_track, k)
+    f2, _ = dynamics(model_dict, temp, u,bank, race_track, k) 
     xm = 0.5 * (x + temp) + (t / 8.0) * (f1.T - f2.T)
     fm, _ = dynamics(model_dict, xm, u,bank, race_track, k)
     opti.subject_to(x + (t / 6.0) * (f1.T + 4 * fm.T + f2.T) - temp == 0)

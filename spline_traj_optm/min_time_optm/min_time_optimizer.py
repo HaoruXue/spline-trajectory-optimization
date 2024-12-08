@@ -34,7 +34,7 @@ def set_up_bicycle_problem(params):
         traj_d[:, Trajectory.LEFT_BOUND_X:Trajectory.LEFT_BOUND_Y+1])
     BoundR = ca.DM(
         traj_d[:, Trajectory.RIGHT_BOUND_X:Trajectory.RIGHT_BOUND_Y+1])
-    scale_x = ca.DM([10.0, 10.0, 3.14, 0.1, 80.0]).T
+    scale_x = ca.DM([10.0, 10.0, 3.14, 0.1, 80.0, 1.0]).T
     scale_u = ca.DM([20.0, 1.0]).T
     scale_t = 1.0
 
@@ -114,7 +114,7 @@ def set_up_double_track_problem(params):
     Bank_Angles = ca.DM(traj_d[:, Trajectory.BANK])
     BoundL = race_track.left_intp(S0)
     BoundR = race_track.right_intp(S0)
-    scale_x = ca.DM([1.0, params["average_track_width"], 1.0, 1.0, 0.5, params["speed_cap"]]).T
+    scale_x = ca.DM([1.0, params["average_track_width"], 1.0, 1.0, 0.5, params["speed_cap"], model["delta_max"]]).T
     scale_u = ca.DM([model["Fd_max"], abs(model["Fb_max"]),
                     model["delta_max"], model["mass"] * 50.0]).T
     scale_t = 1.0
@@ -173,7 +173,7 @@ def set_up_double_track_problem(params):
         # initial condition
         if ("x0" not in params):
             opti.set_initial(
-                X[i-1, :] * scale_x, ca.DM([0.0, 0.0, 0.0, 0.0, 0.0, Velocities[i-1]]))
+                X[i-1, :] * scale_x, ca.DM([0.0, 0.0, 0.0, 0.0, 0.0, Velocities[i-1],0.0]))
             u0 = ca.DM([1.0, -1.0, 0.001, 0.0])
             opti.set_initial(ui, u0)
             opti.set_initial(ti, Times[i-1])
